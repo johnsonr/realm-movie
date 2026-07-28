@@ -19,5 +19,5 @@ displayName: Movies
 description: "Recommend, rate, and recall films"
 icon: "🎬"
 defaultPersona: roger     # the Ebert-style voice the pack ships
-packs: [movie]            # only this pack's skills + APIs are visible to the LLM
+realms: [movie]           # only this realm's skills + APIs are visible to the LLM
 builtins: true            # keep the framework's built-in chat tools (memory, repository, etc.)
