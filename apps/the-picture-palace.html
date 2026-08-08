@@ -55,6 +55,8 @@
   .btn.ghost{background:transparent; color:var(--amber-soft); border:1px solid var(--border); padding:7px 12px}
   .btn.ghost:hover{border-color:var(--amber)}
   .btn:disabled{opacity:.5; cursor:default}
+  .btn.rate-cta{color:var(--amber-soft); border-color:rgba(224,180,92,.62); background:rgba(224,180,92,.08)}
+  .btn.rate-cta:hover{color:#140f06; background:var(--amber)}
   .scroller{max-height:68vh; overflow-y:auto; padding-right:6px}
   .card{display:flex; align-items:flex-start; gap:14px; border:1px solid var(--border); border-left:3px solid var(--rouge);
     background:var(--surface-2); padding:14px 16px; border-radius:2px; margin-bottom:12px}
@@ -92,7 +94,59 @@
   .msg.me{background:rgba(109,21,35,.30); border:1px solid var(--border)}
   .msg.em{background:var(--surface-2); border:1px solid var(--border); border-left:3px solid var(--amber)}
   .taste{font-family:Georgia,serif; font-style:italic; line-height:1.65; color:#ded9cd}
+  .heading-row{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px}
+  .heading-row h2{margin:0}
+  .rating-starter{position:relative; overflow:hidden; display:flex; align-items:center; justify-content:space-between; gap:24px;
+    border-color:rgba(224,180,92,.55); background:linear-gradient(105deg,rgba(109,21,35,.56),rgba(16,18,26,.94) 62%)}
+  .rating-starter[hidden]{display:none}
+  .rating-starter::after{content:'★'; position:absolute; right:138px; top:-38px; color:rgba(224,180,92,.07);
+    font-family:Georgia,serif; font-size:9rem; line-height:1; pointer-events:none}
+  .rating-starter-copy{position:relative; z-index:1; max-width:610px}
+  .rating-starter h2{font-size:1.3rem; margin-bottom:7px}
+  .rating-starter p{margin:0; color:#d5d0c6; line-height:1.55; font-size:.92rem}
+  .rating-starter .btn{position:relative; z-index:1; flex:0 0 auto; padding:13px 20px; font-size:.78rem}
+  .modal{position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center; padding:18px;
+    background:rgba(3,4,7,.84); backdrop-filter:blur(5px)}
+  .modal[hidden]{display:none}
+  .modal-shell{width:min(620px,100%); max-height:calc(100vh - 36px); overflow-y:auto; background:#11131b;
+    border:1px solid rgba(224,180,92,.42); border-top:3px solid var(--amber); border-radius:3px; padding:20px;
+    box-shadow:0 28px 90px rgba(0,0,0,.72)}
+  .modal-head{display:flex; align-items:flex-start; justify-content:space-between; gap:18px}
+  .modal-head h2{font-size:1.22rem; margin:2px 0 4px}
+  .modal-close{flex:0 0 auto; border:0; background:transparent; color:var(--dim); font-size:1.7rem; line-height:1;
+    cursor:pointer; padding:0 2px}
+  .modal-close:hover{color:var(--amber-soft)}
+  .search-results{margin-top:12px; display:grid; gap:7px}
+  .search-result{width:100%; display:flex; align-items:center; gap:12px; text-align:left; background:var(--surface-2);
+    color:var(--text); border:1px solid var(--border); padding:9px 11px; border-radius:2px; cursor:pointer}
+  .search-result:hover,.search-result:focus{outline:none; border-color:var(--amber)}
+  .search-result img{width:38px; height:55px; object-fit:cover; border:1px solid var(--border); border-radius:2px}
+  .search-result .result-title{font-family:Georgia,serif; font-size:.98rem}
+  .selected-film{display:flex; align-items:flex-start; gap:14px; margin:16px 0; padding:13px; background:var(--surface-2);
+    border:1px solid var(--border); border-left:3px solid var(--rouge)}
+  .selected-film img{width:58px; height:86px; object-fit:cover; border:1px solid var(--border); border-radius:2px}
+  .selected-film h3{font-family:Georgia,serif; font-weight:400; margin:1px 0 4px; font-size:1.08rem}
+  .field{display:block; margin-top:15px}
+  .field-label{display:block; color:var(--amber-soft); font-family:Georgia,serif; font-size:.82rem; letter-spacing:.08em;
+    text-transform:uppercase; margin-bottom:7px}
+  textarea,input[type=date]{width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+    padding:10px 12px; border-radius:2px; font:inherit; color-scheme:dark}
+  textarea{min-height:74px; resize:vertical}
+  textarea:focus,input[type=date]:focus{outline:none; border-color:var(--amber)}
+  .rating-picker{display:flex; flex-wrap:wrap; gap:4px; margin-top:2px}
+  .rating-star{border:0; background:transparent; color:#55525b; padding:2px; font-size:1.48rem; line-height:1; cursor:pointer}
+  .rating-star.on{color:var(--amber); text-shadow:0 0 12px rgba(224,180,92,.25)}
+  .rating-star:focus-visible{outline:1px solid var(--amber); outline-offset:2px}
+  .rating-readout{color:var(--amber-soft); font-family:Georgia,serif; margin-left:8px; align-self:center; min-width:64px}
+  .modal-actions{display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:18px; padding-top:15px;
+    border-top:1px solid var(--border)}
+  .success{color:var(--green); font-size:.88rem; margin-top:12px}
+  body.modal-open{overflow:hidden}
   footer.small{text-align:center; color:var(--dim); font-size:.75rem; margin:24px 0 10px; font-family:Georgia,serif; letter-spacing:.08em}
+  @media (max-width:560px){
+    .modal-shell{padding:16px}.rating-star{font-size:1.32rem}.heading-row{align-items:flex-start}.heading-row .btn{white-space:nowrap}
+    .rating-starter{display:block}.rating-starter .btn{margin-top:16px}.rating-starter::after{right:-12px}
+  }
 </style>
 </head>
 <body>
@@ -110,15 +164,26 @@
     <button id="tab-pair">Score a Film</button>
     <button id="tab-ask">Ask</button>
     <button id="tab-how">How It Works</button>
+    <button id="btn-open-rating" class="rate-cta">+ Rate a Film</button>
   </nav>
 
   <section id="sec-seen" class="on">
+    <div class="panel rating-starter" id="rating-starter">
+      <div class="rating-starter-copy">
+        <h2>Start your film diary</h2>
+        <p>Rate one film you've seen. That first score gives The Picture Palace something real to build your recommendations around.</p>
+      </div>
+      <button class="btn rate-cta" id="btn-first-rating">Rate your first film</button>
+    </div>
     <div class="panel">
       <h2>Your taste</h2>
       <div id="taste-out" class="taste"></div>
     </div>
     <div class="panel">
-      <h2>Your ratings</h2>
+      <div class="heading-row">
+        <h2>Your ratings</h2>
+        <button class="btn ghost rate-cta" id="btn-add-rating">+ Add rating</button>
+      </div>
       <div class="row">
         <input type="text" id="q-rated" placeholder="Filter by title or director — leave empty for all">
         <button class="btn" id="btn-rated">Search</button>
@@ -200,6 +265,17 @@ RETURN m.title AS title, m.year AS year, m.director AS director,
 ORDER BY rt.rating DESC, m.title ASC
 LIMIT 200</pre>
 
+      <h3 class="step">Adding or changing a rating</h3>
+      <div class="why">The rating popup resolves a title through OMDb, then creates a MovieRating using your id and the film's IMDb id as its stable key. Saving the same film again updates that record. The repository anchors it to you with <span class="meta">RATED</span>; the <span class="meta">OF</span> hop to full film metadata remains virtual.</div>
+      <pre class="cy">gateway.repository.createEntry({
+  type: 'MovieRating',
+  data: {
+    ratingKey: myId + '::' + imdbId,
+    raterId: myId, imdbId, title, rating,
+    notes, watchedOn
+  }
+})</pre>
+
       <h3 class="step">Everything you've already seen</h3>
       <div class="why">Loaded once at startup into a set of IMDb ids and normalised titles. Every recommendation and every "More like this" result is filtered against it, so nothing you've rated can come back as a suggestion.</div>
       <pre class="cy">MATCH (me:AssistantUser)-[:RATED]-&gt;(rt:MovieRating)-[:OF]-&gt;(m:Movie)
@@ -265,6 +341,50 @@ gateway.wikipedia.search(...) → gateway.wikipedia.getSummary(...)</pre>
   <footer class="small">Metadata from OMDb · Streaming from Streaming Availability · Reviews from the open web · Recordings from YouTube</footer>
 </main>
 
+<div class="modal" id="rating-modal" hidden role="dialog" aria-modal="true" aria-labelledby="rating-modal-title">
+  <div class="modal-shell">
+    <div class="modal-head">
+      <div>
+        <h2 id="rating-modal-title">Rate a film you've seen</h2>
+        <div class="note">Choose a film, then give it a score from 1 to 10.</div>
+      </div>
+      <button class="modal-close" id="rating-close" aria-label="Close rating dialog">×</button>
+    </div>
+
+    <div id="rating-search-step">
+      <div class="row" style="margin-top:18px">
+        <input type="text" id="rating-query" placeholder="Search by film title — e.g. The Third Man" autocomplete="off">
+        <button class="btn" id="rating-search">Find film</button>
+      </div>
+      <div id="rating-results" class="search-results" aria-live="polite"></div>
+    </div>
+
+    <div id="rating-score-step" hidden>
+      <div class="selected-film" id="rating-film"></div>
+      <button class="btn ghost" id="rating-change-film">Choose a different film</button>
+
+      <div class="field">
+        <span class="field-label">Your rating</span>
+        <div class="rating-picker" id="rating-picker" role="radiogroup" aria-label="Rating from 1 to 10"></div>
+      </div>
+
+      <label class="field" for="rating-notes">
+        <span class="field-label">A short reaction <span class="meta">optional</span></span>
+        <textarea id="rating-notes" maxlength="240" placeholder="What stayed with you?"></textarea>
+      </label>
+      <label class="field" for="rating-watched">
+        <span class="field-label">When you watched it <span class="meta">optional</span></span>
+        <input type="date" id="rating-watched">
+      </label>
+      <div id="rating-status" aria-live="polite"></div>
+      <div class="modal-actions">
+        <button class="btn ghost" id="rating-cancel">Cancel</button>
+        <button class="btn" id="rating-save" disabled>Save rating</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 function escapeHtml(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function stripTags(s){return String(s==null?'':s).replace(/<[^>]*>/g,'');}
@@ -322,6 +442,7 @@ function filmCard(m,idx,depth){
       '<button class="btn ghost" data-act="reviews" data-i="'+idx+'">Reviews</button>'+
       '<button class="btn ghost" data-act="music" data-i="'+idx+'">Classical pairing</button>'+
       '<button class="btn ghost" data-act="wiki" data-i="'+idx+'">Wikipedia</button>'+
+      '<button class="btn ghost rate-cta" data-act="rate" data-i="'+idx+'">'+(stars?'Change rating':'Seen it? Rate it')+'</button>'+
       more+
     '</div>'+
     '<div class="extra" id="extra-'+idx+'" style="display:none"></div>'+
@@ -336,15 +457,18 @@ function renderFilms(node,films,depth){
 }
 function normalise(x){
   return {title:x.title, year:x.year, director:x.director, genre:x.genre, imdbId:x.imdbId,
-          poster:x.poster, plot:x.plot||x.Plot, rating:x.rating};
+          poster:x.poster, plot:x.plot||x.Plot, rating:x.rating, notes:x.notes, watchedOn:x.watchedOn};
 }
 
 document.addEventListener('click',function(ev){
   var b=ev.target.closest('button[data-act]');
   if(!b) return;
-  var i=b.getAttribute('data-i'), entry=registry[i], box=el('extra-'+i), act=b.getAttribute('data-act');
-  if(!entry||!box) return;
+  var i=b.getAttribute('data-i'), entry=registry[i], act=b.getAttribute('data-act');
+  if(!entry) return;
   var m=entry.film;
+  if(act==='rate'){ openRating(m); return; }
+  var box=el('extra-'+i);
+  if(!box) return;
   box.style.display='block';
   box.classList.toggle('tall', act==='more');
   if(act==='watch'){ loadWatch(m,box); }
@@ -362,6 +486,11 @@ async function loadSeen(){
       if(row.title) SEEN_TITLES[titleKey(row.title)]=true;
     });
   }catch(ignored){ SEEN_IDS={}; SEEN_TITLES={}; }
+  syncRatingStarter();
+}
+
+function syncRatingStarter(){
+  el('rating-starter').hidden=Object.keys(SEEN_IDS).length>0||Object.keys(SEEN_TITLES).length>0;
 }
 
 async function loadSubscriptions(){
@@ -504,11 +633,17 @@ async function loadRated(){
   try{
     var q=el('q-rated').value.trim();
     var r=await gateway.kg.query({
-      cypher:"MATCH (me:AssistantUser)-[:RATED]->(rt:MovieRating)-[:OF]->(m:Movie) WHERE $q = '' OR toLower(m.title) CONTAINS toLower($q) OR toLower(m.director) CONTAINS toLower($q) RETURN m.title AS title, m.year AS year, m.director AS director, m.genre AS genre, m.imdbId AS imdbId, m.poster AS poster, m.plot AS plot, rt.rating AS rating ORDER BY rt.rating DESC, m.title ASC LIMIT 200",
+      cypher:"MATCH (me:AssistantUser)-[:RATED]->(rt:MovieRating)-[:OF]->(m:Movie) WHERE $q = '' OR toLower(m.title) CONTAINS toLower($q) OR toLower(m.director) CONTAINS toLower($q) RETURN m.title AS title, m.year AS year, m.director AS director, m.genre AS genre, m.imdbId AS imdbId, m.poster AS poster, m.plot AS plot, rt.rating AS rating, rt.notes AS notes, rt.watchedOn AS watchedOn ORDER BY rt.rating DESC, m.title ASC LIMIT 200",
       params:JSON.stringify({q:q})
     });
     if(r.warnings&&r.warnings.length){node.innerHTML='<div class="err">'+escapeHtml(r.warnings.join(' · '))+'</div>';return;}
-    if(!r.rows.length){node.innerHTML='<div class="note">No rated films matched that filter.</div>';return;}
+    if(!r.rows.length){
+      node.innerHTML='<div class="note">'+(q?'No rated films matched that filter.':'You haven\'t rated a film yet. Start with one you remember well.')+'</div>'+
+        (!q?'<div style="margin-top:12px"><button class="btn rate-cta" id="btn-empty-rating">Rate your first film</button></div>':'');
+      var first=el('btn-empty-rating'); if(first) first.addEventListener('click',function(){openRating();});
+      return;
+    }
+    el('rating-starter').hidden=true;
     renderFilms(node,r.rows.map(normalise),0);
   }catch(e){fail(node,e);}
 }
@@ -564,6 +699,158 @@ function addMsg(cls,text){
   c.appendChild(d); c.scrollTop=c.scrollHeight; return d;
 }
 
+var ratingState={film:null,score:0,hover:0,saving:false};
+var currentUserCache=null;
+
+function paintRating(){
+  var shown=ratingState.hover||ratingState.score;
+  var buttons=el('rating-picker').querySelectorAll('.rating-star');
+  buttons.forEach(function(button,index){
+    var on=index<shown;
+    button.classList.toggle('on',on);
+    button.setAttribute('aria-checked',index+1===ratingState.score?'true':'false');
+  });
+  var readout=el('rating-readout');
+  if(readout) readout.textContent=shown?shown+' / 10':'Choose';
+  el('rating-save').disabled=!ratingState.score||ratingState.saving;
+}
+
+function buildRatingPicker(){
+  var picker=el('rating-picker');
+  for(var n=1;n<=10;n++){
+    (function(value){
+      var button=document.createElement('button');
+      button.type='button'; button.className='rating-star'; button.textContent='★';
+      button.setAttribute('role','radio'); button.setAttribute('aria-label',value+' out of 10');
+      button.addEventListener('mouseenter',function(){ratingState.hover=value;paintRating();});
+      button.addEventListener('focus',function(){ratingState.hover=value;paintRating();});
+      button.addEventListener('click',function(){ratingState.score=value;ratingState.hover=0;paintRating();});
+      picker.appendChild(button);
+    })(n);
+  }
+  picker.addEventListener('mouseleave',function(){ratingState.hover=0;paintRating();});
+  picker.addEventListener('focusout',function(e){if(!picker.contains(e.relatedTarget)){ratingState.hover=0;paintRating();}});
+  var readout=document.createElement('span'); readout.id='rating-readout'; readout.className='rating-readout'; readout.textContent='Choose';
+  picker.appendChild(readout);
+}
+
+function filmFromOmdb(x){
+  return {title:x.Title,year:x.Year,director:x.Director,genre:x.Genre,imdbId:x.imdbID,poster:x.Poster,plot:x.Plot};
+}
+
+function showRatingFilm(film){
+  ratingState.film=film; ratingState.score=Number(film.rating)||0; ratingState.hover=0;
+  el('rating-notes').value=film.notes||''; el('rating-watched').value=film.watchedOn||'';
+  el('rating-status').innerHTML='';
+  var poster=(film.poster&&film.poster!=='N/A')?'<img src="'+escapeHtml(film.poster)+'" alt="">':'';
+  el('rating-film').innerHTML=poster+'<div><h3>'+escapeHtml(film.title||'Untitled')+
+    (film.year?' <span class="meta">('+escapeHtml(String(film.year))+')</span>':'')+'</h3>'+
+    (film.director?'<div class="byline">'+escapeHtml(film.director)+'</div>':'')+
+    (film.genre?'<div class="meta">'+escapeHtml(film.genre)+'</div>':'')+'</div>';
+  el('rating-search-step').hidden=true; el('rating-score-step').hidden=false;
+  el('rating-save').textContent=ratingState.score?'Update rating':'Save rating';
+  paintRating();
+}
+
+function resetRatingSearch(){
+  ratingState={film:null,score:0,hover:0,saving:false};
+  el('rating-query').value=''; el('rating-results').innerHTML='';
+  el('rating-save').textContent='Save rating';
+  el('rating-score-step').hidden=true; el('rating-search-step').hidden=false;
+}
+
+function openRating(film){
+  resetRatingSearch();
+  el('rating-modal').hidden=false; document.body.classList.add('modal-open');
+  if(film&&film.imdbId) showRatingFilm(film);
+  else if(film&&film.title){el('rating-query').value=film.title;searchRatingFilms();}
+  else setTimeout(function(){el('rating-query').focus();},0);
+}
+
+function closeRating(){
+  el('rating-modal').hidden=true; document.body.classList.remove('modal-open');
+}
+
+async function searchRatingFilms(){
+  var q=el('rating-query').value.trim(), node=el('rating-results');
+  if(!q){node.innerHTML='<div class="note">Type a film title first.</div>';return;}
+  busy(node,'Searching the programme…'); el('rating-search').disabled=true;
+  try{
+    var result=await gateway.omdb.getMovie({s:q,type:'movie'});
+    var hits=((result&&result.Search)||[]).filter(function(hit){return !hit.Type||hit.Type==='movie';}).slice(0,8);
+    if(!hits.length){node.innerHTML='<div class="note">No film matched that title. Try a fuller or alternate title.</div>';return;}
+    node.innerHTML=hits.map(function(hit,index){
+      var poster=(hit.Poster&&hit.Poster!=='N/A')?'<img src="'+escapeHtml(hit.Poster)+'" alt="">':'';
+      return '<button class="search-result" data-rating-result="'+index+'">'+poster+'<span><span class="result-title">'+
+        escapeHtml(hit.Title)+'</span><span class="meta"> · '+escapeHtml(hit.Year||'Year unknown')+'</span></span></button>';
+    }).join('');
+    node.querySelectorAll('[data-rating-result]').forEach(function(button){
+      button.addEventListener('click',async function(){
+        var hit=hits[Number(button.getAttribute('data-rating-result'))];
+        busy(node,'Fetching '+hit.Title+'…');
+        try{
+          var details=await gateway.omdb.getMovie({i:hit.imdbID,plot:'short'});
+          if(!details||details.Response==='False') throw new Error((details&&details.Error)||'That film could not be loaded.');
+          var film=filmFromOmdb(details);
+          try{
+            var prior=await gateway.kg.query({
+              cypher:'MATCH (me:AssistantUser)-[:RATED]->(r:MovieRating) WHERE r.imdbId = $id RETURN r.rating AS rating, r.notes AS notes, r.watchedOn AS watchedOn LIMIT 1',
+              params:JSON.stringify({id:film.imdbId})
+            });
+            var priorRows=(prior&&prior.rows)||prior||[];
+            if(priorRows[0]){
+              film.rating=priorRows[0].rating; film.notes=priorRows[0].notes; film.watchedOn=priorRows[0].watchedOn;
+            }
+          }catch(ignored){}
+          showRatingFilm(film);
+        }catch(e){fail(node,e);}
+      });
+    });
+  }catch(e){fail(node,e);}
+  finally{el('rating-search').disabled=false;}
+}
+
+async function currentRatingUser(){
+  if(currentUserCache) return currentUserCache;
+  var response=await gateway.kg.query({cypher:'MATCH (me:AssistantUser) RETURN me.id AS id, me.name AS name LIMIT 1',params:'{}'});
+  var rows=(response&&response.rows)||response||[];
+  currentUserCache=rows[0]||{};
+  return currentUserCache;
+}
+
+async function saveRating(){
+  if(!ratingState.film||!ratingState.score||ratingState.saving) return;
+  var film=ratingState.film, status=el('rating-status');
+  ratingState.saving=true; paintRating(); el('rating-save').textContent='Saving…'; status.innerHTML='';
+  try{
+    var me=await currentRatingUser();
+    if(!me.id) throw new Error('Your user profile could not be found.');
+    var data={ratingKey:me.id+'::'+film.imdbId,raterId:me.id,raterName:me.name,imdbId:film.imdbId,
+      title:film.title,rating:ratingState.score};
+    var notes=el('rating-notes').value.trim(), watchedOn=el('rating-watched').value;
+    if(notes) data.notes=notes; if(watchedOn) data.watchedOn=watchedOn;
+    await gateway.repository.createEntry({type:'MovieRating',data:data});
+    film.rating=ratingState.score; film.notes=notes; film.watchedOn=watchedOn;
+    SEEN_IDS[film.imdbId]=true; SEEN_TITLES[titleKey(film.title)]=true;
+    syncRatingStarter();
+    Object.keys(registry).forEach(function(key){
+      var entry=registry[key];
+      if(!entry||!entry.film||entry.film.imdbId!==film.imdbId) return;
+      entry.film.rating=ratingState.score; entry.film.notes=notes; entry.film.watchedOn=watchedOn;
+      var rateButton=document.querySelector('button[data-act="rate"][data-i="'+key+'"]');
+      if(!rateButton) return;
+      rateButton.textContent='Change rating';
+      var body=rateButton.closest('.body'), cardStars=body&&body.querySelector('.stars');
+      if(!cardStars&&body){cardStars=document.createElement('span');cardStars.className='stars';body.insertBefore(cardStars,body.firstChild);}
+      if(cardStars) cardStars.textContent=ratingState.score+' / 10';
+    });
+    status.innerHTML='<div class="success">Saved '+escapeHtml(film.title)+' — '+ratingState.score+' / 10.</div>';
+    el('rating-save').textContent='Update rating';
+    loadRated(); loadTaste();
+  }catch(e){status.innerHTML='<div class="err">'+escapeHtml(e&&e.message?e.message:String(e))+'</div>';el('rating-save').textContent='Save rating';}
+  finally{ratingState.saving=false;paintRating();}
+}
+
 async function ask(){
   var input=el('q-chat'), q=input.value.trim();
   if(!q) return;
@@ -596,6 +883,19 @@ el('btn-pair').addEventListener('click',pairFromInput);
 el('q-pair').addEventListener('keydown',function(e){if(e.key==='Enter')pairFromInput();});
 el('btn-chat').addEventListener('click',ask);
 el('q-chat').addEventListener('keydown',function(e){if(e.key==='Enter')ask();});
+el('btn-open-rating').addEventListener('click',function(){openRating();});
+el('btn-add-rating').addEventListener('click',function(){openRating();});
+el('btn-first-rating').addEventListener('click',function(){openRating();});
+el('rating-close').addEventListener('click',closeRating);
+el('rating-cancel').addEventListener('click',closeRating);
+el('rating-change-film').addEventListener('click',function(){resetRatingSearch();el('rating-query').focus();});
+el('rating-search').addEventListener('click',searchRatingFilms);
+el('rating-query').addEventListener('keydown',function(e){if(e.key==='Enter')searchRatingFilms();});
+el('rating-save').addEventListener('click',saveRating);
+el('rating-modal').addEventListener('click',function(e){if(e.target===el('rating-modal'))closeRating();});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!el('rating-modal').hidden)closeRating();});
+
+buildRatingPicker();
 
 loadSeen().then(function(){ loadRated(); });
 loadSubscriptions();
