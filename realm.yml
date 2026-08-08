@@ -7,7 +7,11 @@ description: |
   ratings) — backed by the `Movie` and `MovieRating` types so ratings
   persist into the world graph and feed back into future
   recommendations. The bundled `roger` personality gives the
-  recommendation write-up a Roger-Ebert voice.
+  recommendation write-up a Roger-Ebert voice. The Picture Palace app
+  (`apps/the-picture-palace.html`) is the same ground seen rather than
+  asked for: search the films you've rated, follow "more like this" into
+  unseen ones, see where each streams, and read the taste summary the
+  ratings add up to.
 version: 0.3.0
 author: Rod Johnson
 url: https://github.com/johnsonr/realm-movie
@@ -17,6 +21,7 @@ tags:
   - openapi
   - skills
   - personalities
+  - apps
 exports:
   - omdb
   - streaming_availability
