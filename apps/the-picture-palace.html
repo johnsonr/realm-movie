@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Picture Palace — Your Film Taste</title>
+<meta name="description" content="Cinematic film companion: search the films you've rated, follow 'more like this' from any film into unseen ones, get taste-based recommendations with an adventurousness slider, see where each film streams in your country, summarise published reviews, pair films with classical works, and inspect the virtual Cypher views behind it all.">
+<script src="/api/v1/apps-runtime/gateway.js"></script>
+<style>
+  :root{
+    --bg:#07080c; --surface:rgba(16,18,26,.88); --surface-2:rgba(22,25,34,.88); --border:#2b2a33;
+    --amber:#e0b45c; --amber-soft:#f0d49a; --beam:#8fb6e8; --rouge:#6d1523;
+    --text:#e9e6df; --dim:#8e8b86; --green:#7fc47c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; padding:0 0 54px; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; min-height:100vh;}
+  #house{
+    position:fixed; inset:0; z-index:-1; background:var(--bg);
+    background-image:
+      radial-gradient(ellipse 60% 34% at 50% 26%, rgba(200,222,255,.22), transparent 70%),
+      radial-gradient(ellipse 130% 60% at 50% 118%, rgba(109,21,35,.40), transparent 72%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800' preserveAspectRatio='xMidYMax slice'><defs><linearGradient id='bgg' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='rgb(14,16,24)'/><stop offset='1' stop-color='rgb(7,8,12)'/></linearGradient><linearGradient id='beam' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='rgb(180,208,245)' stop-opacity='0.20'/><stop offset='1' stop-color='rgb(180,208,245)' stop-opacity='0'/></linearGradient><linearGradient id='scr' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='rgb(226,236,252)' stop-opacity='0.30'/><stop offset='1' stop-color='rgb(226,236,252)' stop-opacity='0.06'/></linearGradient></defs><rect width='1200' height='800' fill='url(%23bgg)'/><rect x='210' y='120' width='780' height='330' rx='6' fill='url(%23scr)'/><rect x='210' y='120' width='780' height='330' rx='6' fill='none' stroke='rgb(226,236,252)' stroke-opacity='0.18'/><path d='M596 760 L210 150 L990 150 L604 760 Z' fill='url(%23beam)'/><g fill='rgb(109,21,35)' fill-opacity='0.55'><rect x='0' y='110' width='150' height='700'/><rect x='1050' y='110' width='150' height='700'/></g><g fill='rgb(226,236,252)' fill-opacity='0.06'><rect x='120' y='560' width='960' height='42' rx='16'/><rect x='80' y='632' width='1040' height='46' rx='16'/><rect x='40' y='712' width='1120' height='50' rx='16'/></g><g fill='rgb(7,8,12)' fill-opacity='0.85'><rect x='150' y='598' width='40' height='40'/><rect x='330' y='598' width='40' height='40'/><rect x='510' y='598' width='40' height='40'/><rect x='690' y='598' width='40' height='40'/><rect x='870' y='598' width='40' height='40'/><rect x='240' y='674' width='44' height='44'/><rect x='440' y='674' width='44' height='44'/><rect x='640' y='674' width='44' height='44'/><rect x='840' y='674' width='44' height='44'/></g></svg>");
+    background-size:cover; background-position:center bottom; background-repeat:no-repeat;
+  }
+  #house::after{content:''; position:absolute; inset:0; background:linear-gradient(180deg, rgba(7,8,12,.52), rgba(7,8,12,.86));}
+  header{border-bottom:1px solid var(--border); padding:34px 20px 24px; text-align:center;
+    background:linear-gradient(180deg, rgba(109,21,35,.24), transparent);}
+  h1{font-family:Georgia,'Times New Roman',serif; font-weight:400; margin:0; font-size:2.5rem;
+    letter-spacing:.16em; text-transform:uppercase; color:var(--amber-soft); text-shadow:0 0 30px rgba(224,180,92,.35);}
+  .sub{color:var(--dim); font-family:Georgia,serif; font-style:italic; margin-top:8px; letter-spacing:.05em}
+  .rule{height:1px; width:200px; margin:16px auto 0; background:linear-gradient(90deg,transparent,var(--amber),transparent)}
+  main{max-width:980px; margin:0 auto; padding:22px 18px}
+  nav{display:flex; gap:6px; flex-wrap:wrap; justify-content:center; margin-bottom:22px}
+  nav button{background:rgba(7,8,12,.55); border:1px solid var(--border); color:var(--dim);
+    font-family:Georgia,serif; letter-spacing:.12em; text-transform:uppercase; font-size:.72rem;
+    padding:10px 16px; border-radius:2px; cursor:pointer;}
+  nav button:hover{color:var(--amber-soft); border-color:var(--amber)}
+  nav button.active{color:#140f06; background:var(--amber); border-color:var(--amber)}
+  section{display:none} section.on{display:block}
+  .panel{background:var(--surface); backdrop-filter:blur(3px); border:1px solid var(--border); border-radius:3px; padding:18px; margin-bottom:18px}
+  h2{font-family:Georgia,serif; font-weight:400; font-size:1.1rem; letter-spacing:.1em; text-transform:uppercase; color:var(--amber-soft); margin:0 0 12px}
+  h3.step{font-family:Georgia,serif; font-weight:400; font-size:.95rem; color:var(--text); margin:18px 0 4px}
+  h3.step:first-of-type{margin-top:0}
+  .row{display:flex; gap:8px; flex-wrap:wrap}
+  input[type=text]{flex:1 1 220px; background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+    padding:11px 13px; border-radius:2px; font-size:.95rem; font-family:inherit;}
+  input[type=text]:focus{outline:none; border-color:var(--amber)}
+  .slider-head{display:flex; justify-content:space-between; align-items:baseline; font-family:Georgia,serif; font-size:.8rem; letter-spacing:.1em; text-transform:uppercase; color:var(--dim)}
+  .slider-head span.val{color:var(--amber-soft); text-transform:none; letter-spacing:.03em; font-style:italic; font-size:.9rem}
+  input[type=range]{width:100%; margin:10px 0 4px; accent-color:var(--amber); background:transparent}
+  .ticks{display:flex; justify-content:space-between; font-size:.68rem; color:var(--dim); letter-spacing:.08em; text-transform:uppercase; font-family:Georgia,serif}
+  .btn{background:var(--amber); color:#140f06; border:none; padding:11px 18px; border-radius:2px;
+    font-family:Georgia,serif; letter-spacing:.1em; text-transform:uppercase; font-size:.72rem; cursor:pointer;}
+  .btn.ghost{background:transparent; color:var(--amber-soft); border:1px solid var(--border); padding:7px 12px}
+  .btn.ghost:hover{border-color:var(--amber)}
+  .btn:disabled{opacity:.5; cursor:default}
+  .scroller{max-height:68vh; overflow-y:auto; padding-right:6px}
+  .card{display:flex; align-items:flex-start; gap:14px; border:1px solid var(--border); border-left:3px solid var(--rouge);
+    background:var(--surface-2); padding:14px 16px; border-radius:2px; margin-bottom:12px}
+  .card img.poster{width:86px; height:129px; object-fit:cover; object-position:center top;
+    align-self:flex-start; flex:0 0 86px; border-radius:2px; border:1px solid var(--border);}
+  .card .body{flex:1 1 auto; min-width:0}
+  .card h3{margin:0 0 3px; font-family:Georgia,serif; font-weight:400; font-size:1.06rem; color:var(--text)}
+  .byline{color:var(--amber-soft); font-family:Georgia,serif; font-style:italic; font-size:.93rem}
+  .meta{color:var(--dim); font-size:.8rem; margin-top:5px; letter-spacing:.04em}
+  .plot{font-size:.86rem; color:#cfcabf; margin-top:7px; line-height:1.5}
+  .stars{float:right; color:var(--amber); font-family:Georgia,serif; font-size:1.02rem}
+  .actions{margin-top:11px; display:flex; gap:8px; flex-wrap:wrap}
+  .extra{margin-top:12px; border-top:1px dashed var(--border); padding-top:11px; font-size:.88rem; line-height:1.58; color:#d5d0c6;
+    max-height:340px; overflow-y:auto; padding-right:6px}
+  .extra.tall{max-height:620px}
+  .extra .card{border-left-color:var(--amber); background:rgba(7,8,12,.45)}
+  .extra .card img.poster{width:64px; height:96px; flex:0 0 64px}
+  .thread{font-size:.75rem; letter-spacing:.09em; text-transform:uppercase; color:var(--dim); font-family:Georgia,serif; margin-bottom:9px}
+  .src{margin-top:9px; padding-left:12px; border-left:1px solid var(--border)}
+  .pairing{margin-bottom:10px; padding-left:12px; border-left:1px solid var(--amber)}
+  .pairing .work{font-family:Georgia,serif; color:var(--amber-soft)}
+  .watch{display:flex; justify-content:space-between; gap:10px; align-items:baseline; padding:6px 0; border-bottom:1px solid rgba(43,42,51,.7)}
+  .watch .how{color:var(--dim); font-size:.78rem; letter-spacing:.05em; text-transform:uppercase; white-space:nowrap}
+  .yours{color:var(--green); font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; margin-left:6px}
+  pre.cy{background:rgba(7,8,12,.75); border:1px solid var(--border); border-left:2px solid var(--beam);
+    padding:11px 13px; border-radius:2px; overflow-x:auto; font-size:.78rem; line-height:1.55;
+    font-family:'SF Mono',Menlo,Consolas,monospace; color:#cfe0f5; margin:6px 0 0; white-space:pre;}
+  .why{font-size:.86rem; color:#cfcabf; line-height:1.55; margin:2px 0 0}
+  .tagline{font-size:.72rem; letter-spacing:.09em; text-transform:uppercase; color:var(--dim); font-family:Georgia,serif; margin-top:7px}
+  a{color:var(--amber-soft)}
+  .note{color:var(--dim); font-size:.85rem; font-style:italic; font-family:Georgia,serif}
+  .err{color:#e08a8a; font-size:.87rem; margin-top:8px}
+  .chat{max-height:420px; overflow-y:auto; padding-right:4px}
+  .msg{margin-bottom:12px; padding:11px 13px; border-radius:2px; line-height:1.6; font-size:.92rem; white-space:pre-wrap}
+  .msg.me{background:rgba(109,21,35,.30); border:1px solid var(--border)}
+  .msg.em{background:var(--surface-2); border:1px solid var(--border); border-left:3px solid var(--amber)}
+  .taste{font-family:Georgia,serif; font-style:italic; line-height:1.65; color:#ded9cd}
+  footer.small{text-align:center; color:var(--dim); font-size:.75rem; margin:24px 0 10px; font-family:Georgia,serif; letter-spacing:.08em}
+</style>
+</head>
+<body>
+<div id="house"></div>
+<header>
+  <h1>The Picture Palace</h1>
+  <div class="sub">your films, and the music they deserve</div>
+  <div class="rule"></div>
+</header>
+
+<main>
+  <nav>
+    <button id="tab-seen" class="active">Films You've Rated</button>
+    <button id="tab-discover">Discover</button>
+    <button id="tab-pair">Score a Film</button>
+    <button id="tab-ask">Ask</button>
+    <button id="tab-how">How It Works</button>
+  </nav>
+
+  <section id="sec-seen" class="on">
+    <div class="panel">
+      <h2>Your taste</h2>
+      <div id="taste-out" class="taste"></div>
+    </div>
+    <div class="panel">
+      <h2>Your ratings</h2>
+      <div class="row">
+        <input type="text" id="q-rated" placeholder="Filter by title or director — leave empty for all">
+        <button class="btn" id="btn-rated">Search</button>
+      </div>
+      <div class="note" style="margin-top:8px">Use <strong>More like this</strong> on any film to walk outward into pictures you haven't rated.</div>
+      <div id="rated-out" class="scroller" style="margin-top:14px"></div>
+    </div>
+  </section>
+
+  <section id="sec-discover">
+    <div class="panel">
+      <h2>Adventurousness</h2>
+      <div class="slider-head"><span>How far to push you</span><span class="val" id="daring-label"></span></div>
+      <input type="range" id="daring" min="0" max="100" step="5" value="35">
+      <div class="ticks"><span>Safe</span><span>Familiar</span><span>Stretching</span><span>Radical</span></div>
+      <div class="note" style="margin-top:8px">Applies to the panels below and to every "More like this" button.</div>
+    </div>
+    <div class="panel">
+      <h2>Films like…</h2>
+      <div class="row">
+        <input type="text" id="q-similar" placeholder="A film you know, e.g. Fargo">
+        <button class="btn" id="btn-similar">Find similar</button>
+      </div>
+      <div id="similar-out" class="scroller" style="margin-top:14px"></div>
+    </div>
+    <div class="panel">
+      <h2>Chosen for you</h2>
+      <div class="row">
+        <input type="text" id="q-steer" placeholder="Optional steer — 'westerns', 'nothing bleak', 'post-2015'">
+        <button class="btn" id="btn-recs">Recommend</button>
+      </div>
+      <div class="note" style="margin-top:8px">Films matching your taste that you have not already rated.</div>
+      <div id="recs-out" class="scroller" style="margin-top:14px"></div>
+    </div>
+  </section>
+
+  <section id="sec-pair">
+    <div class="panel">
+      <h2>Classical works for a film</h2>
+      <div class="row">
+        <input type="text" id="q-pair" placeholder="Name a film — e.g. Blade Runner, Barry Lyndon">
+        <button class="btn" id="btn-pair">Pair</button>
+      </div>
+      <div class="note" style="margin-top:8px">Concert works whose mood, texture and scale match the picture — each with a recording.</div>
+      <div id="pair-out" style="margin-top:14px"></div>
+    </div>
+  </section>
+
+  <section id="sec-ask">
+    <div class="panel">
+      <h2>Ask about films &amp; directors</h2>
+      <div class="chat" id="chat"></div>
+      <div class="row" style="margin-top:12px">
+        <input type="text" id="q-chat" placeholder="What makes Kubrick's use of the zoom in Barry Lyndon unusual?">
+        <button class="btn" id="btn-chat">Ask</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="sec-how">
+    <div class="panel">
+      <h2>What this app is standing on</h2>
+      <div class="why">Everything below runs against your knowledge graph. Some of it is stored data — your ratings, your subscriptions. Some of it is <em>virtual</em>: labels and relationships that don't exist as rows anywhere, but are generated on demand when a query traverses them. To Cypher they look identical. Your per-user scope is injected by the server, which is why no query below mentions a user id.</div>
+      <div class="tagline">All queries run through gateway.kg.query</div>
+    </div>
+
+    <div class="panel">
+      <h2>Stored — your own records</h2>
+
+      <h3 class="step">Films you've rated</h3>
+      <div class="why">A plain traversal. Every rating hangs off you and points at a Movie whose metadata came from OMDb. The <span class="meta">$q = ''</span> guard lets one query serve both the unfiltered list and the search box.</div>
+      <pre class="cy">MATCH (me:AssistantUser)-[:RATED]-&gt;(rt:MovieRating)-[:OF]-&gt;(m:Movie)
+WHERE $q = ''
+   OR toLower(m.title)    CONTAINS toLower($q)
+   OR toLower(m.director) CONTAINS toLower($q)
+RETURN m.title AS title, m.year AS year, m.director AS director,
+       m.genre AS genre, m.imdbId AS imdbId, m.poster AS poster,
+       m.plot AS plot, rt.rating AS rating
+ORDER BY rt.rating DESC, m.title ASC
+LIMIT 200</pre>
+
+      <h3 class="step">Everything you've already seen</h3>
+      <div class="why">Loaded once at startup into a set of IMDb ids and normalised titles. Every recommendation and every "More like this" result is filtered against it, so nothing you've rated can come back as a suggestion.</div>
+      <pre class="cy">MATCH (me:AssistantUser)-[:RATED]-&gt;(rt:MovieRating)-[:OF]-&gt;(m:Movie)
+RETURN m.imdbId AS imdbId, m.title AS title
+LIMIT 1000</pre>
+
+      <h3 class="step">Your streaming subscriptions</h3>
+      <div class="why">Also loaded at startup, then used to mark services <span class="yours">yours</span> in the Where-to-watch panel.</div>
+      <pre class="cy">MATCH (me:AssistantUser)-[:SUBSCRIBES_TO]-&gt;(s:UserStreamingSubscription)
+RETURN s.serviceId AS id, s.serviceName AS name
+LIMIT 50</pre>
+    </div>
+
+    <div class="panel">
+      <h2>Virtual — generated on traversal</h2>
+
+      <h3 class="step">Your taste portrait</h3>
+      <div class="why">There is no stored summary node. Following <span class="meta">HAS_MOVIE_TASTE_SUMMARY</span> reads across all your ratings and composes the portrait at query time, then caches it.</div>
+      <pre class="cy">MATCH (me:AssistantUser)-[:HAS_MOVIE_TASTE_SUMMARY]-&gt;(ts:MovieTasteSummary)
+RETURN ts.summary AS summary, ts.count AS count</pre>
+
+      <h3 class="step">Films like… / More like this (saved view)</h3>
+      <div class="why">A parameterised virtual view, and the same one behind both the Discover search box and the per-card button. The properties in the braces aren't filters over existing nodes — they're <em>arguments</em>. The Adventurousness slider is passed straight in as <span class="meta">steer</span>, which is why the same title returns different films at Safe and at Radical.</div>
+      <pre class="cy">MATCH (x:MoviesLike {
+  movie:    $movie,     // the card's own title, or your typed one
+  steer:    $steer,     // the slider's prose hint
+  minYear:  1900,
+  maxYear:  2100
+})
+RETURN x LIMIT 12
+// results then filtered against your seen-set, client side</pre>
+
+      <h3 class="step">Chosen for you (saved view)</h3>
+      <div class="why">Same mechanism, anchored on your whole taste rather than one film. Your typed steer is appended to the slider's hint before it goes in.</div>
+      <pre class="cy">MATCH (x:MovieRecommendations {
+  steer:    $steer,     // slider hint + your own words
+  minYear:  1900,
+  maxYear:  2100
+})
+RETURN x LIMIT 12</pre>
+
+      <div class="tagline" style="margin-top:16px">A note on cost</div>
+      <div class="why">The virtual traversals are the slow ones — several seconds, because something is genuinely reasoning over your ratings each time rather than reading an index. The two saved views are materialised and cached, which is why this app uses them instead of walking the equivalent per-rating relationships itself.</div>
+    </div>
+
+    <div class="panel">
+      <h2>Off the graph</h2>
+      <div class="why">Four of the card buttons reach outside the knowledge graph entirely, through the typed gateway:</div>
+      <pre class="cy">gateway.streamingAvailability.getShow({ id: imdbId, country: 'au' })
+    → Where to watch, filtered to the Australian catalogue
+
+gateway.brave.webSearch({ q: title + year + ' film review' })
+    → then gateway.ai.complete(...) to summarise the consensus
+
+gateway.ai.complete({ prompt: 'concert works matching ...' })
+    → then gateway.youtube.searchYouTubeVideos(...) per work
+
+gateway.wikipedia.search(...) → gateway.wikipedia.getSummary(...)</pre>
+      <div class="why" style="margin-top:10px">No call in this app talks to an external host directly — every one goes through the gateway, which holds the credentials and does the fetching.</div>
+    </div>
+  </section>
+
+  <footer class="small">Metadata from OMDb · Streaming from Streaming Availability · Reviews from the open web · Recordings from YouTube</footer>
+</main>
+
+<script>
+function escapeHtml(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function stripTags(s){return String(s==null?'':s).replace(/<[^>]*>/g,'');}
+function el(id){return document.getElementById(id);}
+function busy(node,label){node.innerHTML='<div class="note">'+escapeHtml(label)+'</div>';}
+function fail(node,e){node.innerHTML='<div class="err">'+escapeHtml(e&&e.message?e.message:String(e))+'</div>';}
+
+var COUNTRY='au';
+var MY_SERVICES={};
+var SEEN_IDS={}, SEEN_TITLES={};
+
+function titleKey(t){ return String(t==null?'':t).toLowerCase().replace(/^(the|a|an)\s+/,'').replace(/[^a-z0-9]/g,''); }
+function alreadySeen(m){
+  if(m.imdbId && SEEN_IDS[m.imdbId]) return true;
+  if(m.title && SEEN_TITLES[titleKey(m.title)]) return true;
+  return false;
+}
+
+var DARING=[
+  {max:15,name:'Safe',hint:'stay squarely inside the viewer\u2019s established taste: canonical, well-known films by directors and in genres they already love'},
+  {max:40,name:'Familiar',hint:'mostly within the viewer\u2019s established taste, with one or two gentle steps outside it'},
+  {max:70,name:'Stretching',hint:'deliberately stretch the viewer: adjacent directors, decades, countries and genres they have not explored, while keeping a clear line back to what they love'},
+  {max:100,name:'Radical',hint:'push the viewer hard: unfamiliar national cinemas, silent and early film, documentary, experimental and formally difficult work that challenges rather than confirms their established taste'}
+];
+function daringBand(){
+  var v=parseInt(el('daring').value,10);
+  for(var i=0;i<DARING.length;i++){ if(v<=DARING[i].max) return DARING[i]; }
+  return DARING[DARING.length-1];
+}
+function syncDaring(){ el('daring-label').textContent=daringBand().name+' · '+el('daring').value; }
+el('daring').addEventListener('input',syncDaring);
+syncDaring();
+
+var tabs=[['tab-seen','sec-seen'],['tab-discover','sec-discover'],['tab-pair','sec-pair'],['tab-ask','sec-ask'],['tab-how','sec-how']];
+tabs.forEach(function(t){
+  el(t[0]).addEventListener('click',function(){
+    tabs.forEach(function(o){el(o[0]).classList.remove('active');el(o[1]).classList.remove('on');});
+    el(t[0]).classList.add('active'); el(t[1]).classList.add('on');
+  });
+});
+
+var seq=0, registry={};
+function filmCard(m,idx,depth){
+  var stars = (m.rating!=null&&m.rating!=='') ? '<span class="stars">'+escapeHtml(String(m.rating))+' / 10</span>' : '';
+  var poster=(m.poster&&m.poster!=='N/A')?'<img class="poster" src="'+escapeHtml(m.poster)+'" alt="">':'';
+  var imdb=m.imdbId?'<a href="https://www.imdb.com/title/'+escapeHtml(m.imdbId)+'/" target="_blank" rel="noopener noreferrer">IMDb</a>':'';
+  var more=(depth<2)?'<button class="btn ghost" data-act="more" data-i="'+idx+'">More like this</button>':'';
+  return '<div class="card">'+poster+'<div class="body">'+stars+
+    '<h3>'+escapeHtml(m.title)+(m.year?' <span class="meta">('+escapeHtml(String(m.year))+')</span>':'')+'</h3>'+
+    '<div class="byline">'+escapeHtml(m.director||'')+'</div>'+
+    '<div class="meta">'+escapeHtml(m.genre||'')+(imdb?' · '+imdb:'')+'</div>'+
+    (m.plot?'<div class="plot">'+escapeHtml(m.plot)+'</div>':'')+
+    '<div class="actions">'+
+      '<button class="btn ghost" data-act="watch" data-i="'+idx+'">Where to watch</button>'+
+      '<button class="btn ghost" data-act="reviews" data-i="'+idx+'">Reviews</button>'+
+      '<button class="btn ghost" data-act="music" data-i="'+idx+'">Classical pairing</button>'+
+      '<button class="btn ghost" data-act="wiki" data-i="'+idx+'">Wikipedia</button>'+
+      more+
+    '</div>'+
+    '<div class="extra" id="extra-'+idx+'" style="display:none"></div>'+
+  '</div></div>';
+}
+function renderFilms(node,films,depth){
+  var d=depth||0;
+  if(!films.length){node.innerHTML='<div class="note">Nothing matched that. Try a broader term.</div>';return;}
+  var html='';
+  films.forEach(function(m){ var i=++seq; registry[i]={film:m,depth:d}; html+=filmCard(m,i,d); });
+  node.innerHTML=html;
+}
+function normalise(x){
+  return {title:x.title, year:x.year, director:x.director, genre:x.genre, imdbId:x.imdbId,
+          poster:x.poster, plot:x.plot||x.Plot, rating:x.rating};
+}
+
+document.addEventListener('click',function(ev){
+  var b=ev.target.closest('button[data-act]');
+  if(!b) return;
+  var i=b.getAttribute('data-i'), entry=registry[i], box=el('extra-'+i), act=b.getAttribute('data-act');
+  if(!entry||!box) return;
+  var m=entry.film;
+  box.style.display='block';
+  box.classList.toggle('tall', act==='more');
+  if(act==='watch'){ loadWatch(m,box); }
+  else if(act==='reviews'){ loadReviews(m,box); }
+  else if(act==='music'){ loadPairing(m.title+(m.year?' ('+m.year+')':''),box); }
+  else if(act==='more'){ loadMoreLike(m,box,entry.depth+1); }
+  else { loadWiki(m,box); }
+});
+
+async function loadSeen(){
+  try{
+    var r=await gateway.kg.query({cypher:"MATCH (me:AssistantUser)-[:RATED]->(rt:MovieRating)-[:OF]->(m:Movie) RETURN m.imdbId AS imdbId, m.title AS title LIMIT 1000",params:"{}"});
+    r.rows.forEach(function(row){
+      if(row.imdbId) SEEN_IDS[row.imdbId]=true;
+      if(row.title) SEEN_TITLES[titleKey(row.title)]=true;
+    });
+  }catch(ignored){ SEEN_IDS={}; SEEN_TITLES={}; }
+}
+
+async function loadSubscriptions(){
+  try{
+    var r=await gateway.kg.query({cypher:"MATCH (me:AssistantUser)-[:SUBSCRIBES_TO]->(s:UserStreamingSubscription) RETURN s.serviceId AS id, s.serviceName AS name LIMIT 50",params:"{}"});
+    r.rows.forEach(function(row){ MY_SERVICES[row.id]=row.name; });
+  }catch(ignored){ MY_SERVICES={}; }
+}
+
+async function fetchLike(title,steer,limit){
+  var r=await gateway.kg.query({
+    cypher:"MATCH (x:MoviesLike {movie: $movie, steer: $steer, minYear: 1900, maxYear: 2100}) RETURN x LIMIT "+limit,
+    params:JSON.stringify({movie:title,steer:steer})
+  });
+  if(r.warnings&&r.warnings.length) throw new Error(r.warnings.join(' · '));
+  return r.rows.map(function(row){return normalise(row.x||row);}).filter(function(m){return !alreadySeen(m);});
+}
+
+async function loadMoreLike(m,box,depth){
+  var band=daringBand();
+  busy(box,'Following the thread from '+m.title+' — '+band.name.toLowerCase()+' picks…');
+  try{
+    var films=await fetchLike(m.title,band.hint,12);
+    if(!films.length){
+      box.innerHTML='<div class="note">Everything that came back you have already rated. Push the Adventurousness slider up and try again.</div>';
+      return;
+    }
+    box.innerHTML='<div class="thread">Unseen films in the orbit of '+escapeHtml(m.title)+' · '+escapeHtml(band.name)+'</div><div id="thread-'+depth+'-'+(++seq)+'"></div>';
+    var host=box.lastChild;
+    renderFilms(host,films.slice(0,8),depth);
+  }catch(e){fail(box,e);}
+}
+
+var OFFER_ORDER={subscription:0, free:1, addon:2, rent:3, buy:4};
+function offerLabel(o){
+  var t=o.type||'';
+  var base = t==='subscription' ? 'Included' : (t==='free' ? 'Free' : (t==='addon' ? 'Channel add-on' : (t==='rent' ? 'Rent' : (t==='buy' ? 'Buy' : t))));
+  var price=o.price&&o.price.formatted?' '+o.price.formatted:'';
+  var qual=o.quality?' · '+String(o.quality).toUpperCase():'';
+  return base+price+qual;
+}
+
+async function loadWatch(m,box){
+  busy(box,'Checking what is streaming near you…');
+  try{
+    var show=null;
+    if(m.imdbId){
+      show=await gateway.streamingAvailability.getShow({id:m.imdbId,country:COUNTRY});
+    }else{
+      var hits=await gateway.streamingAvailability.searchShowsByTitle({country:COUNTRY,title:m.title,show_type:'movie'});
+      show=(hits&&hits.length)?hits[0]:null;
+    }
+    var opts=(show&&show.streamingOptions&&show.streamingOptions[COUNTRY])||[];
+    if(!opts.length){
+      box.innerHTML='<div class="note">Nothing streaming in Australia right now — it may be out of licence or disc-only at the moment.</div>';
+      return;
+    }
+    opts=opts.slice().sort(function(a,b){
+      var ao=OFFER_ORDER[a.type]==null?9:OFFER_ORDER[a.type], bo=OFFER_ORDER[b.type]==null?9:OFFER_ORDER[b.type];
+      if(ao!==bo) return ao-bo;
+      return String((a.service&&a.service.name)||'').localeCompare(String((b.service&&b.service.name)||''));
+    });
+    var h='', shown={};
+    opts.forEach(function(o){
+      var svc=(o.service&&o.service.name)||'Service', sid=(o.service&&o.service.id)||'';
+      var key=sid+'|'+o.type+'|'+(o.price&&o.price.formatted||'');
+      if(shown[key]) return; shown[key]=true;
+      var mine=MY_SERVICES[sid]?'<span class="yours">yours</span>':'';
+      var name=o.link?'<a href="'+escapeHtml(o.link)+'" target="_blank" rel="noopener noreferrer">'+escapeHtml(svc)+'</a>':escapeHtml(svc);
+      h+='<div class="watch"><div>'+name+mine+'</div><div class="how">'+escapeHtml(offerLabel(o))+'</div></div>';
+    });
+    h+='<div class="meta" style="margin-top:8px">Australia · subscriptions you hold marked "yours"</div>';
+    box.innerHTML=h;
+  }catch(e){fail(box,e);}
+}
+
+async function loadReviews(m,box){
+  busy(box,'Gathering the notices and reading them…');
+  try{
+    var q=m.title+' '+(m.year||'')+' film review';
+    var res=await gateway.brave.webSearch({q:q});
+    var hits=((res&&res.web&&res.web.results)||[]).slice(0,6);
+    if(!hits.length){box.innerHTML='<div class="note">The open web returned no notices for that title.</div>';return;}
+    var corpus=hits.map(function(r,i){return (i+1)+'. '+stripTags(r.title||'')+' ('+(r.profile&&r.profile.name?r.profile.name:r.url)+'): '+stripTags(r.description||'');}).join('\n');
+    var summary=await gateway.ai.complete({
+      prompt:'Below are search results for published reviews of the film "'+m.title+'" ('+(m.year||'')+').\n'+corpus+
+        '\n\nIn at most 140 words of your own words, summarise the critical consensus: what critics praise, what they fault, and how divided they are. Paraphrase throughout — quote nothing. Plain prose, no headings.',
+      role:''
+    });
+    var h='<div>'+escapeHtml(String(summary).trim())+'</div><div class="meta" style="margin-top:10px">Sources</div>';
+    hits.forEach(function(r){
+      h+='<div class="src"><a href="'+escapeHtml(r.url)+'" target="_blank" rel="noopener noreferrer">'+escapeHtml(stripTags(r.title||r.url))+'</a></div>';
+    });
+    box.innerHTML=h;
+  }catch(e){fail(box,e);}
+}
+
+async function loadWiki(m,box){
+  busy(box,'Fetching the article…');
+  try{
+    var res=await gateway.wikipedia.search({q:m.title+' '+(m.year||'')+' film',limit:3});
+    var pages=(res&&res.pages)||[];
+    if(!pages.length){box.innerHTML='<div class="note">Wikipedia has no matching article for that title.</div>';return;}
+    var sum=await gateway.wikipedia.getSummary({title:pages[0].title});
+    var url=(sum&&(sum.content_urls&&sum.content_urls.desktop?sum.content_urls.desktop.page:sum.url))||('https://en.wikipedia.org/wiki/'+encodeURIComponent(pages[0].key||pages[0].title));
+    box.innerHTML='<div><a href="'+escapeHtml(url)+'" target="_blank" rel="noopener noreferrer">'+escapeHtml((sum&&sum.titles&&sum.titles.normalized)||pages[0].title)+'</a></div>'+
+      '<div style="margin-top:6px">'+escapeHtml((sum&&(sum.extract||sum.summary))||pages[0].description||'')+'</div>';
+  }catch(e){fail(box,e);}
+}
+
+async function loadPairing(filmName,box){
+  busy(box,'Choosing works to match the picture…');
+  try{
+    var txt=await gateway.ai.complete({
+      prompt:'Suggest 4 classical concert works (not film scores) whose mood, texture, pace and scale match the film "'+filmName+
+        '". Reply ONLY with lines in the form: Composer surname | Full work title | one short sentence on why it fits. No numbering, no other commentary.',
+      role:''
+    });
+    var works=String(txt).split('\n').map(function(l){return l.replace(/^[\s\-*\d.]+/,'').trim().replace(/\*/g,'');})
+      .filter(function(l){return l.split('|').length>=2;})
+      .map(function(l){var p=l.split('|');return {composer:p[0].trim(), title:p[1].trim(), why:(p[2]||'').trim()};});
+    if(!works.length){box.innerHTML='<div class="note">No pairing came back for that title — try naming the film more fully.</div>';return;}
+    var h='';
+    for(var i=0;i<works.length;i++){
+      var w=works[i];
+      var vid=await gateway.youtube.searchYouTubeVideos({q:w.composer+' '+w.title+' full performance',part:'snippet',type:'video',videoEmbeddable:'true',maxResults:1});
+      var it=(vid&&vid.items&&vid.items[0])||null;
+      var link=it&&it.id&&it.id.videoId?'https://www.youtube.com/watch?v='+it.id.videoId:'';
+      h+='<div class="pairing"><div class="work">'+escapeHtml(w.composer)+' — '+escapeHtml(w.title)+'</div>'+
+         (w.why?'<div class="meta">'+escapeHtml(w.why)+'</div>':'')+
+         (link?'<div style="margin-top:4px"><a href="'+escapeHtml(link)+'" target="_blank" rel="noopener noreferrer">'+escapeHtml(stripTags(it.snippet.title))+'</a></div>':'')+
+         '</div>';
+    }
+    box.innerHTML=h;
+  }catch(e){fail(box,e);}
+}
+
+async function loadRated(){
+  var node=el('rated-out'); busy(node,'Consulting your ratings…');
+  try{
+    var q=el('q-rated').value.trim();
+    var r=await gateway.kg.query({
+      cypher:"MATCH (me:AssistantUser)-[:RATED]->(rt:MovieRating)-[:OF]->(m:Movie) WHERE $q = '' OR toLower(m.title) CONTAINS toLower($q) OR toLower(m.director) CONTAINS toLower($q) RETURN m.title AS title, m.year AS year, m.director AS director, m.genre AS genre, m.imdbId AS imdbId, m.poster AS poster, m.plot AS plot, rt.rating AS rating ORDER BY rt.rating DESC, m.title ASC LIMIT 200",
+      params:JSON.stringify({q:q})
+    });
+    if(r.warnings&&r.warnings.length){node.innerHTML='<div class="err">'+escapeHtml(r.warnings.join(' · '))+'</div>';return;}
+    if(!r.rows.length){node.innerHTML='<div class="note">No rated films matched that filter.</div>';return;}
+    renderFilms(node,r.rows.map(normalise),0);
+  }catch(e){fail(node,e);}
+}
+
+async function loadTaste(){
+  var node=el('taste-out'); busy(node,'Reading your taste…');
+  try{
+    var r=await gateway.kg.query({cypher:"MATCH (me:AssistantUser)-[:HAS_MOVIE_TASTE_SUMMARY]->(ts:MovieTasteSummary) RETURN ts.summary AS summary, ts.count AS count",params:"{}"});
+    if(!r.rows.length||!r.rows[0].summary){node.innerHTML='<div class="note">Rate a few films and a portrait of your taste will appear here.</div>';return;}
+    node.innerHTML=escapeHtml(r.rows[0].summary)+'<div class="meta" style="margin-top:8px">drawn from '+escapeHtml(String(r.rows[0].count))+' rated film(s)</div>';
+  }catch(e){fail(node,e);}
+}
+
+async function loadSimilar(){
+  var node=el('similar-out'); var q=el('q-similar').value.trim();
+  if(!q){node.innerHTML='<div class="note">Name a film first.</div>';return;}
+  var band=daringBand();
+  busy(node,'Screening the archive — '+band.name.toLowerCase()+' picks…');
+  try{
+    var films=await fetchLike(q,band.hint,12);
+    if(!films.length){node.innerHTML='<div class="note">Nothing unseen came back for that title — try the full name as released, or a bolder setting.</div>';return;}
+    renderFilms(node,films.slice(0,10),0);
+  }catch(e){fail(node,e);}
+}
+
+async function loadRecs(){
+  var node=el('recs-out'); var band=daringBand();
+  busy(node,'Programming a '+band.name.toLowerCase()+' season for you…');
+  try{
+    var steer=el('q-steer').value.trim();
+    var hint=band.hint+(steer?('; also: '+steer):'');
+    var r=await gateway.kg.query({
+      cypher:"MATCH (x:MovieRecommendations {steer: $steer, minYear: 1900, maxYear: 2100}) RETURN x LIMIT 12",
+      params:JSON.stringify({steer:hint})
+    });
+    if(r.warnings&&r.warnings.length){node.innerHTML='<div class="err">'+escapeHtml(r.warnings.join(' · '))+'</div>';return;}
+    var films=r.rows.map(function(row){return normalise(row.x||row);}).filter(function(m){return !alreadySeen(m);});
+    if(!films.length){node.innerHTML='<div class="note">Everything suggested you have already rated. Push the slider up and try again.</div>';return;}
+    renderFilms(node,films.slice(0,10),0);
+  }catch(e){fail(node,e);}
+}
+
+async function pairFromInput(){
+  var node=el('pair-out'); var q=el('q-pair').value.trim();
+  if(!q){node.innerHTML='<div class="note">Name a film first.</div>';return;}
+  await loadPairing(q,node);
+}
+
+function addMsg(cls,text){
+  var c=el('chat');
+  var d=document.createElement('div');
+  d.className='msg '+cls; d.innerHTML=escapeHtml(text);
+  c.appendChild(d); c.scrollTop=c.scrollHeight; return d;
+}
+
+async function ask(){
+  var input=el('q-chat'), q=input.value.trim();
+  if(!q) return;
+  input.value='';
+  addMsg('me',q);
+  var pending=addMsg('em','…');
+  el('btn-chat').disabled=true;
+  try{
+    var ctx='';
+    try{
+      var t=await gateway.kg.query({cypher:"MATCH (me:AssistantUser)-[:HAS_MOVIE_TASTE_SUMMARY]->(ts:MovieTasteSummary) RETURN ts.summary AS summary",params:"{}"});
+      if(t.rows.length) ctx='The viewer\u2019s taste: '+t.rows[0].summary;
+    }catch(ignored){ ctx=''; }
+    var ans=await gateway.ai.complete({
+      prompt:'You are a well-read film critic and historian. Answer in at most 180 words, plain prose, no markdown headings.\n'+ctx+'\nQuestion: '+q,
+      role:''
+    });
+    pending.innerHTML=escapeHtml(String(ans).trim());
+  }catch(e){
+    pending.innerHTML='<span class="err">'+escapeHtml(e&&e.message?e.message:String(e))+'</span>';
+  }finally{ el('btn-chat').disabled=false; }
+}
+
+el('btn-rated').addEventListener('click',loadRated);
+el('q-rated').addEventListener('keydown',function(e){if(e.key==='Enter')loadRated();});
+el('btn-similar').addEventListener('click',loadSimilar);
+el('q-similar').addEventListener('keydown',function(e){if(e.key==='Enter')loadSimilar();});
+el('btn-recs').addEventListener('click',loadRecs);
+el('btn-pair').addEventListener('click',pairFromInput);
+el('q-pair').addEventListener('keydown',function(e){if(e.key==='Enter')pairFromInput();});
+el('btn-chat').addEventListener('click',ask);
+el('q-chat').addEventListener('keydown',function(e){if(e.key==='Enter')ask();});
+
+loadSeen().then(function(){ loadRated(); });
+loadSubscriptions();
+loadTaste();
+addMsg('em','Ask me about a director, a film, a movement, or why a picture looks the way it does.');
+</script>
+
+<div id="embabel-badge" style="position:fixed;bottom:0;left:0;right:0;text-align:center;padding:6px 0;background:rgba(10,10,15,0.9);border-top:1px solid rgba(99,192,245,0.2);font-size:0.75rem;color:#6b7280;z-index:9999;pointer-events:none;">
+  Created with <a href="https://embabel.com" target="_blank" rel="noopener noreferrer" style="color:#63c0f5;text-decoration:none;pointer-events:auto;">Embabel Me</a>
+</div>
+</body>
+</html>
