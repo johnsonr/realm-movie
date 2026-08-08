@@ -12,7 +12,7 @@ description: |
   asked for: search the films you've rated, follow "more like this" into
   unseen ones, see where each streams, and read the taste summary the
   ratings add up to.
-version: 0.3.0
+version: 0.4.0
 author: Rod Johnson
 url: https://github.com/johnsonr/realm-movie
 tags:
