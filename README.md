@@ -162,8 +162,9 @@ ORDER BY r.reviewDate DESC
 ```
 
 You can also click **Run** on the saved views in the console's **Views** tab: `MyFilmTaste`,
-`MovieRecommendations`, `StreamableRecommendations`, `NoirRecommendations`, `MoviesYoullProbablyHate`,
-`TasteBasedRecommendations`, and the multi-person views `RatingsByRater`, `MutualFavourites`, `DividedOpinions`.
+`StreamableRecommendations`, `NoirRecommendations`, `MoviesYoullProbablyHate`, `TasteBasedRecommendations`,
+`NewReleases` (web-searched new releases matching your taste), and the multi-person views
+`RatingsByRater`, `MutualFavourites`, `DividedOpinions`.
 `MoviesLike` needs its film named, so run it as a query: `MATCH (m:MoviesLike {movie: 'Heat'}) RETURN m`
 — similars to any film you name (rated or not), excluding everything you've already rated.
 

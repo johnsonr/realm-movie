@@ -261,6 +261,80 @@
     kind: ttl
     seconds: 604800                 # weekly — matches the summary's refresh cadence
 
+# newReleasePicks: NEW releases matching the user's taste — the web-grounded sibling of tasteBasedPicks.
+# Same shape (generative, anchored on the MovieTasteSummary prose, OMDb-resolved onto the Movie spine) with
+# two differences that go together: `tools: [web]` (what's newly in cinemas or fresh on streaming cannot come
+# from parametric memory) and `volatility: volatile` (which FORBIDS a parametric answer — tool-grounded or
+# refused). Cached one day, not a week: recency is the point of the edge.
+- name: newReleasePicks
+  kind: generative
+  edgeType: SUGGESTS_NEW
+  identityField: imdbId
+  anchorKeyField: freshFromTaste   # echoes the summary key so every pick links back to the one MovieTasteSummary
+  nameField: title
+  volatility: volatile
+  confidenceFloor: 0.3
+  defaultWant: 15
+  generator:
+    kind: llm
+    tools: [web]                   # live web search — the recency claim must be grounded, never recalled
+    prompt: |
+      You are a film curator with live web access. Below is a prose description of one person's taste in film.
+      Use web search to find films RELEASED RECENTLY — currently showing in cinemas, or newly arrived on
+      streaming services, within roughly the last six months — that this person would very likely love.
+      Ground EVERY pick in a page you actually find (release coverage, listings, reviews); never suggest a
+      film from memory alone, and never suggest an older film just because it fits the taste.
+
+      Their taste:
+      {% for a in anchors %}{{ a.title }}
+      {% endfor %}
+      {% if exclude %}
+      Do NOT suggest any of these (already known, seen, or already suggested — ignore any that look like a
+      paragraph rather than a film title):
+      {% for e in exclude %}- {{ e }}
+      {% endfor %}
+      {% endif %}
+      {% if constraints %}
+      Only suggest films that satisfy ALL of these constraints (skip any that don't):
+      {% for c in constraints %}- {{ c }}
+      {% endfor %}
+      {% endif %}
+      {% if hint %}
+      The viewer has a specific request: {{ hint }}. Treat it as a HARD requirement — EVERY film you
+      suggest MUST clearly satisfy "{{ hint }}". This OVERRIDES taste fit: if a film matches the taste but
+      does not satisfy the request, DROP it and pick one that does. Never include a film that only partly
+      fits just to reach the count — a shorter list of true matches is better.
+      {% endif %}
+      Rules:
+      - Suggest up to {{ want }} films in total.
+      - Set `sourceIndex` to 1 (there is a single taste description).
+      - `title` is the film's exact title as released.
+      - `confidence` is 0.0-1.0: how sure you are the film is BOTH genuinely recent (per a page you found)
+        AND a real match for this taste. Be honest; don't invent or pad to reach the count.
+  resolveVia:
+    name: resolveTitle
+    kind: remote
+    operation: getMovie
+    args:
+      t: "{keys}"
+    keyTemplate: "{key}"
+    records: "$"
+    project:
+      imdbId: imdbID
+      title: Title
+      year: Year
+      genre: Genre
+      country: Country
+      director: Director
+      runtimeMinutes: Runtime
+      plot: Plot
+      imdbRating: imdbRating
+      imdbVotes: imdbVotes
+      poster: Poster
+  cache:
+    kind: ttl
+    seconds: 86400                  # 1 day — what's "new" moves weekly, and web search is the source anyway
+
 # movieReviews: a PROMPTED, WEB-GROUNDED edge that returns the MovieReview type. The mirror of similarMovies as
 # an LLM producer, with two additions: `tools: [web]` (so it looks up REAL reviews, not stale parametric memory
 # — which also relaxes the volatility gate: `slow` is allowed BECAUSE it's tool-grounded), and NO resolveVia

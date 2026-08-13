@@ -4,32 +4,88 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Picture Palace — Your Film Taste</title>
-<meta name="description" content="Cinematic film companion: search the films you've rated, follow 'more like this' from any film into unseen ones, get taste-based recommendations with an adventurousness slider, see where each film streams in your country, summarise published reviews, pair films with classical works, and inspect the virtual Cypher views behind it all.">
+<meta name="description" content="Cinematic film companion: search the films you've rated, follow 'more like this' from any film into unseen ones, get taste-based recommendations with an adventurousness slider, discover newly released films via live web search, see where each film streams in your country, summarise published reviews, pair films with classical works, choose a house style from Classic Hollywood to Drive-In, and inspect the virtual Cypher views behind it all.">
 <script src="/api/v1/apps-runtime/gateway.js"></script>
 <style>
+  /* ── Themes ─────────────────────────────────────────────────────────────────
+     Pure CSS: each theme is a set of custom properties plus its own #house scene.
+     Classic Hollywood is the default; the picker in the header just swaps
+     body[data-theme] and everything re-colours itself. */
   :root{
+    /* Classic Hollywood — red curtains, gold sunburst, marquee bulbs */
+    --bg:#150809; --surface:rgba(31,18,15,.9); --surface-2:rgba(40,24,19,.9); --border:#4a3120;
+    --amber:#e6b23e; --amber-soft:#f4d489; --beam:#f2e4bd; --rouge:#8e1622;
+    --text:#f0e9db; --dim:#a5917a; --green:#8fc47c;
+    --tint-weak:rgba(142,22,34,.26); --tint-mid:rgba(142,22,34,.32); --tint-strong:rgba(142,22,34,.58);
+    --panel-deep:#1b100d; --veil-a:rgba(21,8,9,.40); --veil-b:rgba(21,8,9,.78);
+  }
+  body[data-theme=midnight]{
+    /* Midnight Screening — the quiet blue auditorium */
     --bg:#07080c; --surface:rgba(16,18,26,.88); --surface-2:rgba(22,25,34,.88); --border:#2b2a33;
     --amber:#e0b45c; --amber-soft:#f0d49a; --beam:#8fb6e8; --rouge:#6d1523;
     --text:#e9e6df; --dim:#8e8b86; --green:#7fc47c;
+    --tint-weak:rgba(109,21,35,.24); --tint-mid:rgba(109,21,35,.30); --tint-strong:rgba(109,21,35,.56);
+    --panel-deep:#11131b; --veil-a:rgba(7,8,12,.52); --veil-b:rgba(7,8,12,.86);
+  }
+  body[data-theme=noir]{
+    /* Film Noir — silver on black, venetian blinds */
+    --bg:#0a0a0d; --surface:rgba(18,18,22,.9); --surface-2:rgba(25,25,30,.9); --border:#35353d;
+    --amber:#cfd2da; --amber-soft:#eceef4; --beam:#e6e8ee; --rouge:#50525c;
+    --text:#e8e8ea; --dim:#8d8d95; --green:#a9b4a9;
+    --tint-weak:rgba(120,124,140,.14); --tint-mid:rgba(120,124,140,.18); --tint-strong:rgba(120,124,140,.30);
+    --panel-deep:#101014; --veil-a:rgba(10,10,13,.45); --veil-b:rgba(10,10,13,.82);
+  }
+  body[data-theme=drivein]{
+    /* Drive-In — dusk sky, neon horizon, cars before the screen */
+    --bg:#0d0718; --surface:rgba(23,15,38,.9); --surface-2:rgba(31,20,50,.9); --border:#3d2b5e;
+    --amber:#ff9d47; --amber-soft:#ffc98f; --beam:#6fd6e8; --rouge:#a92b6e;
+    --text:#f1eaf7; --dim:#9a8bb0; --green:#7fd0a0;
+    --tint-weak:rgba(169,43,110,.22); --tint-mid:rgba(169,43,110,.28); --tint-strong:rgba(169,43,110,.52);
+    --panel-deep:#170e28; --veil-a:rgba(13,7,24,.35); --veil-b:rgba(13,7,24,.78);
   }
   *{box-sizing:border-box}
   body{margin:0; padding:0 0 54px; background:var(--bg); color:var(--text);
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; min-height:100vh;}
   #house{
     position:fixed; inset:0; z-index:-1; background:var(--bg);
+    background-size:cover; background-position:center bottom; background-repeat:no-repeat;
+    /* Classic Hollywood scene: pelmet + bulbs, curtains with folds, gold sunburst, crossed searchlights, a star */
+    background-image:
+      radial-gradient(ellipse 55% 30% at 50% 8%, rgba(230,178,62,.18), transparent 70%),
+      radial-gradient(ellipse 120% 55% at 50% 115%, rgba(142,22,34,.45), transparent 72%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800' preserveAspectRatio='xMidYMax slice'><defs><linearGradient id='bgg' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='rgb(34,13,15)'/><stop offset='1' stop-color='rgb(18,7,9)'/></linearGradient><linearGradient id='cur' x1='0' y1='0' x2='1' y2='0'><stop offset='0' stop-color='rgb(130,18,28)'/><stop offset='0.5' stop-color='rgb(70,8,16)'/><stop offset='1' stop-color='rgb(130,18,28)'/></linearGradient></defs><rect width='1200' height='800' fill='url(%23bgg)'/><g fill='rgb(230,178,62)' fill-opacity='0.07'><path d='M600 820 L60 0 L170 0 Z'/><path d='M600 820 L330 0 L420 0 Z'/><path d='M600 820 L555 0 L645 0 Z'/><path d='M600 820 L780 0 L870 0 Z'/><path d='M600 820 L1030 0 L1140 0 Z'/></g><g fill='rgb(242,228,189)' fill-opacity='0.05'><path d='M250 820 L60 0 L310 0 Z'/><path d='M950 820 L890 0 L1140 0 Z'/></g><polygon points='600,250 614,291 657,291 623,317 635,359 600,334 565,359 577,317 543,291 586,291' fill='rgb(230,178,62)' fill-opacity='0.28'/><g fill='url(%23cur)'><rect x='0' y='64' width='210' height='736'/><rect x='990' y='64' width='210' height='736'/></g><g fill='rgb(0,0,0)' fill-opacity='0.28'><rect x='26' y='64' width='12' height='736'/><rect x='66' y='64' width='12' height='736'/><rect x='106' y='64' width='12' height='736'/><rect x='146' y='64' width='12' height='736'/><rect x='186' y='64' width='12' height='736'/><rect x='1002' y='64' width='12' height='736'/><rect x='1042' y='64' width='12' height='736'/><rect x='1082' y='64' width='12' height='736'/><rect x='1122' y='64' width='12' height='736'/><rect x='1162' y='64' width='12' height='736'/></g><rect x='0' y='0' width='1200' height='64' fill='rgb(96,10,20)'/><g fill='rgb(96,10,20)'><circle cx='46' cy='64' r='46'/><circle cx='138' cy='64' r='46'/><circle cx='230' cy='64' r='46'/><circle cx='322' cy='64' r='46'/><circle cx='414' cy='64' r='46'/><circle cx='506' cy='64' r='46'/><circle cx='598' cy='64' r='46'/><circle cx='690' cy='64' r='46'/><circle cx='782' cy='64' r='46'/><circle cx='874' cy='64' r='46'/><circle cx='966' cy='64' r='46'/><circle cx='1058' cy='64' r='46'/><circle cx='1150' cy='64' r='46'/></g><g fill='rgb(244,214,137)' fill-opacity='0.9'><circle cx='50' cy='30' r='5'/><circle cx='150' cy='30' r='5'/><circle cx='250' cy='30' r='5'/><circle cx='350' cy='30' r='5'/><circle cx='450' cy='30' r='5'/><circle cx='550' cy='30' r='5'/><circle cx='650' cy='30' r='5'/><circle cx='750' cy='30' r='5'/><circle cx='850' cy='30' r='5'/><circle cx='950' cy='30' r='5'/><circle cx='1050' cy='30' r='5'/><circle cx='1150' cy='30' r='5'/></g></svg>");
+  }
+  body[data-theme=midnight] #house{
     background-image:
       radial-gradient(ellipse 60% 34% at 50% 26%, rgba(200,222,255,.22), transparent 70%),
       radial-gradient(ellipse 130% 60% at 50% 118%, rgba(109,21,35,.40), transparent 72%),
       url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800' preserveAspectRatio='xMidYMax slice'><defs><linearGradient id='bgg' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='rgb(14,16,24)'/><stop offset='1' stop-color='rgb(7,8,12)'/></linearGradient><linearGradient id='beam' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='rgb(180,208,245)' stop-opacity='0.20'/><stop offset='1' stop-color='rgb(180,208,245)' stop-opacity='0'/></linearGradient><linearGradient id='scr' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='rgb(226,236,252)' stop-opacity='0.30'/><stop offset='1' stop-color='rgb(226,236,252)' stop-opacity='0.06'/></linearGradient></defs><rect width='1200' height='800' fill='url(%23bgg)'/><rect x='210' y='120' width='780' height='330' rx='6' fill='url(%23scr)'/><rect x='210' y='120' width='780' height='330' rx='6' fill='none' stroke='rgb(226,236,252)' stroke-opacity='0.18'/><path d='M596 760 L210 150 L990 150 L604 760 Z' fill='url(%23beam)'/><g fill='rgb(109,21,35)' fill-opacity='0.55'><rect x='0' y='110' width='150' height='700'/><rect x='1050' y='110' width='150' height='700'/></g><g fill='rgb(226,236,252)' fill-opacity='0.06'><rect x='120' y='560' width='960' height='42' rx='16'/><rect x='80' y='632' width='1040' height='46' rx='16'/><rect x='40' y='712' width='1120' height='50' rx='16'/></g><g fill='rgb(7,8,12)' fill-opacity='0.85'><rect x='150' y='598' width='40' height='40'/><rect x='330' y='598' width='40' height='40'/><rect x='510' y='598' width='40' height='40'/><rect x='690' y='598' width='40' height='40'/><rect x='870' y='598' width='40' height='40'/><rect x='240' y='674' width='44' height='44'/><rect x='440' y='674' width='44' height='44'/><rect x='640' y='674' width='44' height='44'/><rect x='840' y='674' width='44' height='44'/></g></svg>");
-    background-size:cover; background-position:center bottom; background-repeat:no-repeat;
   }
-  #house::after{content:''; position:absolute; inset:0; background:linear-gradient(180deg, rgba(7,8,12,.52), rgba(7,8,12,.86));}
+  body[data-theme=noir] #house{
+    background-image:
+      radial-gradient(ellipse 50% 40% at 22% 0%, rgba(230,232,238,.16), transparent 70%),
+      radial-gradient(ellipse 130% 50% at 50% 118%, rgba(0,0,0,.6), transparent 75%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800' preserveAspectRatio='xMidYMax slice'><defs><linearGradient id='bgg' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='rgb(24,24,28)'/><stop offset='1' stop-color='rgb(8,8,10)'/></linearGradient></defs><rect width='1200' height='800' fill='url(%23bgg)'/><path d='M140 0 L480 0 L860 800 L520 800 Z' fill='rgb(236,238,244)' fill-opacity='0.05'/><path d='M640 0 L820 0 L1200 640 L1200 800 L1100 800 Z' fill='rgb(236,238,244)' fill-opacity='0.035'/><g fill='rgb(236,238,244)' fill-opacity='0.045' transform='skewY(-6)'><rect x='0' y='160' width='1200' height='20'/><rect x='0' y='220' width='1200' height='20'/><rect x='0' y='280' width='1200' height='20'/><rect x='0' y='340' width='1200' height='20'/><rect x='0' y='400' width='1200' height='20'/><rect x='0' y='460' width='1200' height='20'/><rect x='0' y='520' width='1200' height='20'/><rect x='0' y='580' width='1200' height='20'/><rect x='0' y='640' width='1200' height='20'/><rect x='0' y='700' width='1200' height='20'/><rect x='0' y='760' width='1200' height='20'/><rect x='0' y='820' width='1200' height='20'/></g><path d='M180 780 C 230 660 140 570 205 470 C 258 392 205 345 235 290' fill='none' stroke='rgb(236,238,244)' stroke-opacity='0.09' stroke-width='4'/></svg>");
+  }
+  body[data-theme=drivein] #house{
+    background-image:
+      radial-gradient(ellipse 45% 25% at 50% 30%, rgba(160,220,255,.18), transparent 70%),
+      radial-gradient(ellipse 120% 50% at 50% 115%, rgba(169,43,110,.42), transparent 72%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800' preserveAspectRatio='xMidYMax slice'><defs><linearGradient id='sky' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='rgb(16,9,38)'/><stop offset='0.55' stop-color='rgb(52,18,66)'/><stop offset='0.82' stop-color='rgb(150,52,60)'/><stop offset='1' stop-color='rgb(235,120,60)'/></linearGradient><linearGradient id='scr' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='rgb(240,244,255)' stop-opacity='0.85'/><stop offset='1' stop-color='rgb(180,200,230)' stop-opacity='0.45'/></linearGradient><g id='car'><path d='M0 30 Q8 12 32 10 Q44 0 66 0 Q88 0 100 10 Q124 12 132 30 Z'/><circle cx='30' cy='30' r='9'/><circle cx='102' cy='30' r='9'/></g></defs><rect x='0' y='0' width='1200' height='560' fill='url(%23sky)'/><g fill='rgb(255,255,255)' fill-opacity='0.8'><circle cx='90' cy='60' r='2'/><circle cx='210' cy='130' r='1.5'/><circle cx='330' cy='40' r='2'/><circle cx='480' cy='90' r='1.5'/><circle cx='700' cy='50' r='2'/><circle cx='840' cy='110' r='1.5'/><circle cx='980' cy='60' r='2'/><circle cx='1100' cy='140' r='1.5'/><circle cx='150' cy='200' r='1.5'/><circle cx='1040' cy='210' r='1.5'/></g><rect x='388' y='424' width='16' height='136' fill='rgb(6,4,10)'/><rect x='796' y='424' width='16' height='136' fill='rgb(6,4,10)'/><rect x='330' y='120' width='540' height='306' rx='6' fill='url(%23scr)'/><rect x='330' y='120' width='540' height='306' rx='6' fill='none' stroke='rgb(240,244,255)' stroke-opacity='0.3'/><rect x='0' y='560' width='1200' height='240' fill='rgb(8,5,14)'/><rect x='0' y='558' width='1200' height='3' fill='rgb(111,214,232)' fill-opacity='0.5'/><g fill='rgb(4,3,8)'><use href='%23car' x='150' y='610'/><use href='%23car' x='400' y='632'/><use href='%23car' x='660' y='610'/><use href='%23car' x='910' y='632'/></g></svg>");
+  }
+  #house::after{content:''; position:absolute; inset:0; background:linear-gradient(180deg, var(--veil-a), var(--veil-b));}
   header{border-bottom:1px solid var(--border); padding:34px 20px 24px; text-align:center;
-    background:linear-gradient(180deg, rgba(109,21,35,.24), transparent);}
+    background:linear-gradient(180deg, var(--tint-weak), transparent);}
   h1{font-family:Georgia,'Times New Roman',serif; font-weight:400; margin:0; font-size:2.5rem;
-    letter-spacing:.16em; text-transform:uppercase; color:var(--amber-soft); text-shadow:0 0 30px rgba(224,180,92,.35);}
+    letter-spacing:.16em; text-transform:uppercase; color:var(--amber-soft); text-shadow:0 0 30px color-mix(in srgb, var(--amber) 35%, transparent);}
   .sub{color:var(--dim); font-family:Georgia,serif; font-style:italic; margin-top:8px; letter-spacing:.05em}
   .rule{height:1px; width:200px; margin:16px auto 0; background:linear-gradient(90deg,transparent,var(--amber),transparent)}
+  .themes{display:flex; gap:6px; justify-content:center; flex-wrap:wrap; margin-top:14px}
+  .themes button{background:transparent; border:1px solid var(--border); color:var(--dim);
+    font-family:Georgia,serif; font-size:.62rem; letter-spacing:.14em; text-transform:uppercase;
+    padding:5px 10px; border-radius:2px; cursor:pointer}
+  .themes button:hover{color:var(--amber-soft)}
+  .themes button.active{color:var(--amber-soft); border-color:var(--amber)}
   main{max-width:980px; margin:0 auto; padding:22px 18px}
   nav{display:flex; gap:6px; flex-wrap:wrap; justify-content:center; margin-bottom:22px}
   nav button{background:rgba(7,8,12,.55); border:1px solid var(--border); color:var(--dim);
@@ -55,7 +111,7 @@
   .btn.ghost{background:transparent; color:var(--amber-soft); border:1px solid var(--border); padding:7px 12px}
   .btn.ghost:hover{border-color:var(--amber)}
   .btn:disabled{opacity:.5; cursor:default}
-  .btn.rate-cta{color:var(--amber-soft); border-color:rgba(224,180,92,.62); background:rgba(224,180,92,.08)}
+  .btn.rate-cta{color:var(--amber-soft); border-color:color-mix(in srgb, var(--amber) 62%, transparent); background:color-mix(in srgb, var(--amber) 8%, transparent)}
   .btn.rate-cta:hover{color:#140f06; background:var(--amber)}
   .scroller{max-height:68vh; overflow-y:auto; padding-right:6px}
   .card{display:flex; align-items:flex-start; gap:14px; border:1px solid var(--border); border-left:3px solid var(--rouge);
@@ -91,15 +147,15 @@
   .err{color:#e08a8a; font-size:.87rem; margin-top:8px}
   .chat{max-height:420px; overflow-y:auto; padding-right:4px}
   .msg{margin-bottom:12px; padding:11px 13px; border-radius:2px; line-height:1.6; font-size:.92rem; white-space:pre-wrap}
-  .msg.me{background:rgba(109,21,35,.30); border:1px solid var(--border)}
+  .msg.me{background:var(--tint-mid); border:1px solid var(--border)}
   .msg.em{background:var(--surface-2); border:1px solid var(--border); border-left:3px solid var(--amber)}
   .taste{font-family:Georgia,serif; font-style:italic; line-height:1.65; color:#ded9cd}
   .heading-row{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px}
   .heading-row h2{margin:0}
   .rating-starter{position:relative; overflow:hidden; display:flex; align-items:center; justify-content:space-between; gap:24px;
-    border-color:rgba(224,180,92,.55); background:linear-gradient(105deg,rgba(109,21,35,.56),rgba(16,18,26,.94) 62%)}
+    border-color:color-mix(in srgb, var(--amber) 55%, transparent); background:linear-gradient(105deg,var(--tint-strong),var(--panel-deep) 62%)}
   .rating-starter[hidden]{display:none}
-  .rating-starter::after{content:'★'; position:absolute; right:138px; top:-38px; color:rgba(224,180,92,.07);
+  .rating-starter::after{content:'★'; position:absolute; right:138px; top:-38px; color:color-mix(in srgb, var(--amber) 7%, transparent);
     font-family:Georgia,serif; font-size:9rem; line-height:1; pointer-events:none}
   .rating-starter-copy{position:relative; z-index:1; max-width:610px}
   .rating-starter h2{font-size:1.3rem; margin-bottom:7px}
@@ -108,8 +164,8 @@
   .modal{position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center; padding:18px;
     background:rgba(3,4,7,.84); backdrop-filter:blur(5px)}
   .modal[hidden]{display:none}
-  .modal-shell{width:min(620px,100%); max-height:calc(100vh - 36px); overflow-y:auto; background:#11131b;
-    border:1px solid rgba(224,180,92,.42); border-top:3px solid var(--amber); border-radius:3px; padding:20px;
+  .modal-shell{width:min(620px,100%); max-height:calc(100vh - 36px); overflow-y:auto; background:var(--panel-deep);
+    border:1px solid color-mix(in srgb, var(--amber) 42%, transparent); border-top:3px solid var(--amber); border-radius:3px; padding:20px;
     box-shadow:0 28px 90px rgba(0,0,0,.72)}
   .modal-head{display:flex; align-items:flex-start; justify-content:space-between; gap:18px}
   .modal-head h2{font-size:1.22rem; margin:2px 0 4px}
@@ -135,7 +191,7 @@
   textarea:focus,input[type=date]:focus{outline:none; border-color:var(--amber)}
   .rating-picker{display:flex; flex-wrap:wrap; gap:4px; margin-top:2px}
   .rating-star{border:0; background:transparent; color:#55525b; padding:2px; font-size:1.48rem; line-height:1; cursor:pointer}
-  .rating-star.on{color:var(--amber); text-shadow:0 0 12px rgba(224,180,92,.25)}
+  .rating-star.on{color:var(--amber); text-shadow:0 0 12px color-mix(in srgb, var(--amber) 25%, transparent)}
   .rating-star:focus-visible{outline:1px solid var(--amber); outline-offset:2px}
   .rating-readout{color:var(--amber-soft); font-family:Georgia,serif; margin-left:8px; align-self:center; min-width:64px}
   .modal-actions{display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:18px; padding-top:15px;
@@ -155,6 +211,12 @@
   <h1>The Picture Palace</h1>
   <div class="sub">your films, and the music they deserve</div>
   <div class="rule"></div>
+  <div class="themes" id="themes" role="group" aria-label="House style">
+    <button data-theme="hollywood" class="active">Classic Hollywood</button>
+    <button data-theme="midnight">Midnight Screening</button>
+    <button data-theme="noir">Film Noir</button>
+    <button data-theme="drivein">Drive-In</button>
+  </div>
 </header>
 
 <main>
@@ -217,6 +279,15 @@
       </div>
       <div class="note" style="margin-top:8px">Films matching your taste that you have not already rated.</div>
       <div id="recs-out" class="scroller" style="margin-top:14px"></div>
+    </div>
+    <div class="panel">
+      <h2>New &amp; now</h2>
+      <div class="row">
+        <input type="text" id="q-new" placeholder="Optional steer — 'in cinemas', 'sci-fi', 'something gentle'">
+        <button class="btn" id="btn-new">Search the web</button>
+      </div>
+      <div class="note" style="margin-top:8px">Newly released films matching your taste — in cinemas or fresh on streaming, found by live web search rather than from memory.</div>
+      <div id="new-out" class="scroller" style="margin-top:14px"></div>
     </div>
   </section>
 
@@ -308,17 +379,23 @@ RETURN ts.summary AS summary, ts.count AS count</pre>
 RETURN x LIMIT 12
 // results then filtered against your seen-set, client side</pre>
 
-      <h3 class="step">Chosen for you (saved view)</h3>
-      <div class="why">Same mechanism, anchored on your whole taste rather than one film. Your typed steer is appended to the slider's hint before it goes in.</div>
-      <pre class="cy">MATCH (x:MovieRecommendations {
-  steer:    $steer,     // slider hint + your own words
-  minYear:  1900,
-  maxYear:  2100
+      <h3 class="step">Chosen for you</h3>
+      <div class="why">A two-stage virtual chain, anchored on your whole taste rather than one film. Following <span class="meta">HAS_MOVIE_TASTE_SUMMARY</span> materialises the taste portrait above; following <span class="meta">SUGGESTS</span> from it generates films matching the portrait's through-lines. Your typed steer is appended to the slider's hint and flows into the generator as the <span class="meta">ai.hint</span> directive.</div>
+      <pre class="cy">MATCH (me:AssistantUser)-[:HAS_MOVIE_TASTE_SUMMARY]-&gt;(ts:MovieTasteSummary)
+MATCH (ts)-[:SUGGESTS {ai: {hint: $steer}}]-&gt;(m:Movie)
+WHERE NOT EXISTS { (me)-[:RATED]-&gt;(seen:MovieRating)
+                   WHERE seen.imdbId = m.imdbId }
+RETURN DISTINCT m LIMIT 12</pre>
+
+      <h3 class="step">New &amp; now (saved view)</h3>
+      <div class="why">The same taste chain over a different edge — <span class="meta">SUGGESTS_NEW</span> — whose producer is <em>web-grounded</em>: what's newly in cinemas or fresh on streaming isn't something a model can recall, so it searches the live web, then resolves each find through OMDb before it becomes a Movie node here.</div>
+      <pre class="cy">MATCH (x:NewReleases {
+  steer:    $steer      // slider hint + your own words
 })
 RETURN x LIMIT 12</pre>
 
       <div class="tagline" style="margin-top:16px">A note on cost</div>
-      <div class="why">The virtual traversals are the slow ones — several seconds, because something is genuinely reasoning over your ratings each time rather than reading an index. The two saved views are materialised and cached, which is why this app uses them instead of walking the equivalent per-rating relationships itself.</div>
+      <div class="why">The virtual traversals are the slow ones — several seconds, because something is genuinely reasoning over your ratings each time rather than reading an index. The taste summary and every generated edge are cached (the summary weekly, new releases daily), which is why repeats come back fast.</div>
     </div>
 
     <div class="panel">
@@ -676,12 +753,32 @@ async function loadRecs(){
     var steer=el('q-steer').value.trim();
     var hint=band.hint+(steer?('; also: '+steer):'');
     var r=await gateway.kg.query({
-      cypher:"MATCH (x:MovieRecommendations {steer: $steer, minYear: 1900, maxYear: 2100}) RETURN x LIMIT 12",
+      cypher:"MATCH (me:AssistantUser)-[:HAS_MOVIE_TASTE_SUMMARY]->(ts:MovieTasteSummary) "+
+        "MATCH (ts)-[:SUGGESTS {ai: {hint: $steer}}]->(m:Movie) "+
+        "WHERE NOT EXISTS { (me)-[:RATED]->(seen:MovieRating) WHERE seen.imdbId = m.imdbId } "+
+        "RETURN DISTINCT m LIMIT 12",
+      params:JSON.stringify({steer:hint})
+    });
+    if(r.warnings&&r.warnings.length){node.innerHTML='<div class="err">'+escapeHtml(r.warnings.join(' · '))+'</div>';return;}
+    var films=r.rows.map(function(row){return normalise(row.m||row);}).filter(function(m){return !alreadySeen(m);});
+    if(!films.length){node.innerHTML='<div class="note">Everything suggested you have already rated. Push the slider up and try again.</div>';return;}
+    renderFilms(node,films.slice(0,10),0);
+  }catch(e){fail(node,e);}
+}
+
+async function loadNew(){
+  var node=el('new-out'); var band=daringBand();
+  busy(node,'Searching the web for what is newly out…');
+  try{
+    var steer=el('q-new').value.trim();
+    var hint=band.hint+(steer?('; also: '+steer):'');
+    var r=await gateway.kg.query({
+      cypher:"MATCH (x:NewReleases {steer: $steer}) RETURN x LIMIT 12",
       params:JSON.stringify({steer:hint})
     });
     if(r.warnings&&r.warnings.length){node.innerHTML='<div class="err">'+escapeHtml(r.warnings.join(' · '))+'</div>';return;}
     var films=r.rows.map(function(row){return normalise(row.x||row);}).filter(function(m){return !alreadySeen(m);});
-    if(!films.length){node.innerHTML='<div class="note">Everything suggested you have already rated. Push the slider up and try again.</div>';return;}
+    if(!films.length){node.innerHTML='<div class="note">Nothing newly released matched your taste this time — try a steer, or push the slider up.</div>';return;}
     renderFilms(node,films.slice(0,10),0);
   }catch(e){fail(node,e);}
 }
@@ -879,6 +976,8 @@ el('q-rated').addEventListener('keydown',function(e){if(e.key==='Enter')loadRate
 el('btn-similar').addEventListener('click',loadSimilar);
 el('q-similar').addEventListener('keydown',function(e){if(e.key==='Enter')loadSimilar();});
 el('btn-recs').addEventListener('click',loadRecs);
+el('btn-new').addEventListener('click',loadNew);
+el('q-new').addEventListener('keydown',function(e){if(e.key==='Enter')loadNew();});
 el('btn-pair').addEventListener('click',pairFromInput);
 el('q-pair').addEventListener('keydown',function(e){if(e.key==='Enter')pairFromInput();});
 el('btn-chat').addEventListener('click',ask);
@@ -896,6 +995,22 @@ el('rating-modal').addEventListener('click',function(e){if(e.target===el('rating
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!el('rating-modal').hidden)closeRating();});
 
 buildRatingPicker();
+
+(function(){
+  var row=el('themes');
+  function applyTheme(t){
+    document.body.setAttribute('data-theme',t);
+    row.querySelectorAll('button').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-theme')===t);});
+    try{localStorage.setItem('pp-theme',t);}catch(ignored){}
+  }
+  row.addEventListener('click',function(ev){
+    var b=ev.target.closest('button[data-theme]');
+    if(b) applyTheme(b.getAttribute('data-theme'));
+  });
+  var saved=null;
+  try{saved=localStorage.getItem('pp-theme');}catch(ignored){}
+  applyTheme(saved&&row.querySelector('button[data-theme="'+saved+'"]')?saved:'hollywood');
+})();
 
 loadSeen().then(function(){ loadRated(); });
 loadSubscriptions();

@@ -1,25 +1,27 @@
-# View 2 — top recommendations WITH streaming. Same recommendations as view 1, but each is tagged with
-# which of YOUR streaming services (SUBSCRIBES_TO, from reference data) it's available on now, in your
-# country (AVAILABLE_ON — the Streaming Availability producer). OPTIONAL MATCH, not MATCH: most films
-# won't be on your services, so all recommendations show and the streamable ones are tagged + floated to
-# the top ("all recs, tag streamable ones"). AVAILABLE_ON's StreamingService.serviceId intersects the
-# user's UserStreamingSubscription.serviceId.
+# Top recommendations WITH streaming — taste-anchored, each tagged with which of YOUR streaming
+# services (SUBSCRIBES_TO, from reference data) has it now, in your country (AVAILABLE_ON — the
+# Streaming Availability producer). Anchored on the MovieTasteSummary chain (fan-IN over your ratings,
+# then SUGGESTS fan-OUT), not per-film similars. OPTIONAL MATCH, not MATCH: most films won't be on
+# your services, so all recommendations show and the streamable ones are tagged + floated to the top
+# ("all recs, tag streamable ones"). AVAILABLE_ON's StreamingService.serviceId intersects the user's
+# UserStreamingSubscription.serviceId.
 id: recommendations-to-stream
 name: Recommendations You Can Stream
-description: Recommended films, tagged with which of your streaming services have them now.
+description: Films matching your taste, tagged with which of your streaming services have them now.
 spec:
   kind: cypherscript
   script: |
     const { rows } = await gateway.kg.query({
-      cypher: `MATCH (me:AssistantUser)-[:RATED]->(rt:MovieRating) WHERE rt.rating >= 8
-               MATCH (rt)-[:SIMILAR_TO]->(m:Movie)
+      cypher: `MATCH (me:AssistantUser)-[:HAS_MOVIE_TASTE_SUMMARY]->(ts:MovieTasteSummary)
+               MATCH (ts)-[:SUGGESTS]->(m:Movie)
                WHERE NOT EXISTS { (me)-[:RATED]->(seen:MovieRating) WHERE seen.imdbId = m.imdbId }
                OPTIONAL MATCH (m)-[:AVAILABLE_ON]->(s:StreamingService)
                  WHERE EXISTS { (me)-[:SUBSCRIBES_TO]->(:UserStreamingSubscription {serviceId: s.serviceId}) }
-               WITH m, count(DISTINCT rt) AS overlap, collect(DISTINCT s.serviceName) AS onYourServices
+               WITH m, collect(DISTINCT s.serviceName) AS onYourServices
                RETURN m.title AS title, m.year AS year, m.genre AS genre, m.director AS director,
-                      overlap, onYourServices
-               ORDER BY size(onYourServices) DESC, overlap DESC, m.title ASC
+                      onYourServices
+               ORDER BY size(onYourServices) DESC,
+                        coalesce(toFloat(toString(m.imdbRating)), 0.0) DESC, m.title ASC
                LIMIT 12`,
       params: JSON.stringify({}),
     });

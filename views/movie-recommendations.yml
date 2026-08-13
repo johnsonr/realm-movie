@@ -30,32 +30,11 @@
     MATCH (rt)-[:OF]->(m:Movie)
     RETURN DISTINCT m
 
-# Films similar to ones you rated highly, that you haven't already seen. PARAMETERIZED: `steer` is a
-# free-text soft steer flowing into the SIMILAR_TO generator's `{ai: {hint}}` directive (empty = unsteered,
-# identical to the bare edge); `minYear` floors the release year (default 1900 = no effective floor).
-# Tune inline: MATCH (m:MovieRecommendations {steer: 'obscure, and French', minYear: 1970}) RETURN m
-- name: MovieRecommendations
-  description: Films like the ones you've loved, that you haven't already seen.
-  outputLabel: Movie
-  params:
-    steer:
-      type: string
-      default: ""
-      description: "A soft steer for the picks — a mood, an era, a language ('obscure, and French'). Empty = unsteered."
-    minYear:
-      type: int
-      default: 1900
-      description: "Only include films released in or after this year."
-    maxYear:
-      type: int
-      default: 2100
-      description: "Only include films released in or before this year."
-  cypher: |
-    MATCH (me:AssistantUser)-[:RATED]->(rt:MovieRating) WHERE rt.rating >= 8
-    MATCH (rt)-[:SIMILAR_TO {ai: {hint: $steer}}]->(m:Movie)
-    WHERE NOT EXISTS { (me)-[:RATED]->(seen:MovieRating) WHERE seen.imdbId = m.imdbId }
-      AND m.year >= $minYear AND m.year <= $maxYear
-    RETURN DISTINCT m
+# (The former MovieRecommendations view — a SIMILAR_TO fan-out over every film rated 8+ — is gone:
+# per-film similars off a bunch of loved films cost one generation per anchor and overlap heavily.
+# Taste-as-a-whole recommendation goes through the MovieTasteSummary chain instead: see
+# TasteBasedRecommendations, StreamableRecommendations, and NewReleases below. Single-film similars
+# remain as MoviesLike.)
 
 # Films like ONE NAMED FILM — "movies like Heat" — excluding anything you've already rated. The anchor
 # is PINNED by title, so the engine binds your real MovieRating when you have rated the film, and
@@ -197,11 +176,11 @@
 
 # Recommendations from your taste AS A WHOLE — a two-stage virtual chain: the MovieTasteSummary node
 # materializes (fan-IN over your ratings), then SUGGESTS generates films off its prose (fan-OUT). Unlike
-# MovieRecommendations (similars to individual loved films), these are picked to match the overall through-lines.
+# MoviesLike (similars to one named film), these are picked to match the overall through-lines.
 #
 # A TABULAR view: it RETURNs specific scalar columns (title, rating, plot, a derived IMDb link, …) and ORDERs
 # them, rather than returning the Movie node. A tabular view is TERMINAL — run it to see the table; it can't be
-# composed into a traversal as `(v:TasteBasedRecommendations)` the way a node view (MovieRecommendations) can.
+# composed into a traversal as `(v:TasteBasedRecommendations)` the way a node view (RatedMovies) can.
 # No `outputLabel` (it isn't node-returning). `imdbUrl` is derived from the id; plot/imdbRating are projected
 # onto Movie (types/movies.yml). Ordered by IMDb rating desc, then title.
 - name: TasteBasedRecommendations
@@ -228,6 +207,26 @@
            m.director AS director, m.runtimeMinutes AS runtime, m.imdbRating AS imdbRating,
            m.plot AS plot, 'https://www.imdb.com/title/' + m.imdbId + '/' AS imdbUrl
     ORDER BY coalesce(toFloat(toString(imdbRating)), 0.0) DESC, title ASC
+
+# NEW releases matching your taste, found by LIVE WEB SEARCH — the same two-stage taste chain as
+# TasteBasedRecommendations, but over the SUGGESTS_NEW edge, whose producer (`newReleasePicks`) is
+# tool-grounded (`tools: [web]`, volatility volatile): what's newly in cinemas or fresh on streaming is
+# NOT parametric knowledge, so the generator must search the open web and each pick is still resolved
+# onto the Movie spine via OMDb. Cached for a day, not a week — recency is the point.
+#   MATCH (m:NewReleases {steer: 'nothing bleak'}) RETURN m
+- name: NewReleases
+  description: Newly released films matching your taste — currently in cinemas or fresh on streaming, found by live web search.
+  outputLabel: Movie
+  params:
+    steer:
+      type: string
+      default: ""
+      description: "A soft steer for the picks ('in cinemas only', 'sci-fi', 'something gentle'). Empty = unsteered."
+  cypher: |
+    MATCH (me:AssistantUser)-[:HAS_MOVIE_TASTE_SUMMARY]->(ts:MovieTasteSummary)
+    MATCH (ts)-[:SUGGESTS_NEW {ai: {hint: $steer}}]->(m:Movie)
+    WHERE NOT EXISTS { (me)-[:RATED]->(seen:MovieRating) WHERE seen.imdbId = m.imdbId }
+    RETURN DISTINCT m
 
 # ── Multi-person views ──────────────────────────────────────────────────────────────────────
 # A MovieRating carries `raterName`/`raterId`, and every rating hangs off its rater by

@@ -132,6 +132,20 @@
       description: >-
         Films that match your OVERALL taste, generated from your taste summary rather than from any one rating.
         A good "surprise me based on everything I like" list; exclude films you've already rated.
+    # SUGGESTS_NEW: the WEB-GROUNDED sibling of SUGGESTS — NEW releases (in cinemas / fresh on streaming)
+    # matching the taste summary. What is newly out is volatile, so the producer searches the live web
+    # (tools: [web]) instead of answering from parametric memory; each find still resolves onto the
+    # Movie spine via OMDb so it dedupes against rated films. Same anchor, same chain shape:
+    #   MATCH (me:AssistantUser)-[:HAS_MOVIE_TASTE_SUMMARY]->(ts:MovieTasteSummary)-[:SUGGESTS_NEW]->(m:Movie)
+    - anchorLabel: MovieTasteSummary
+      relationship: SUGGESTS_NEW
+      keyField: summary
+      recordKeyField: freshFromTaste  # newReleasePicks echoes the anchor key here (distinct from SUGGESTS's fromTaste)
+      producer: newReleasePicks
+      description: >-
+        NEWLY RELEASED films matching your overall taste — currently in cinemas or fresh on streaming,
+        found by live web search rather than from memory. Use for "anything new out I'd like?";
+        exclude films you've already rated.
 
 - name: StreamingService
   userAnchor: false
