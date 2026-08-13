@@ -16,6 +16,7 @@ description: |
 version: 0.5.0
 author: Rod Johnson
 url: https://github.com/johnsonr/realm-movie
+icon: icon.svg
 tags:
   - movies
   - recommendations

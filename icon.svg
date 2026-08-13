@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Movie realm — a lit cinema screen between parted curtains">
+  <!--
+    The Picture Palace, at 40 pixels: curtains parted on a lit screen.
+
+    Drawn in the realm's own palette (apps/the-picture-palace.html) so the tile and
+    the app it launches are recognisably the same place — deep #150809 ground,
+    rouge curtains, amber #e6b23e light.
+
+    Four shapes carry it — pelmet, curtain, screen, beam — because anything finer
+    than about two units of stroke turns to mud at tile size. No text and no
+    film-reel sprockets: both vanish when this is 40px in a launcher grid.
+
+    The screen is a trapezoid, wider at the bottom, so it reads as seen from a seat
+    rather than as a plain rectangle. It sits BELOW the pelmet's lowest dip, which
+    is the whole reason the dip is shallow: a deeper scallop looks better on its own
+    and puts a black notch through the top of the picture.
+  -->
+  <defs>
+    <linearGradient id="screen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fbeac2"/>
+      <stop offset="1" stop-color="#e0a92f"/>
+    </linearGradient>
+    <linearGradient id="curtain" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6d1018"/>
+      <stop offset=".45" stop-color="#a81c2a"/>
+      <stop offset="1" stop-color="#7c131c"/>
+    </linearGradient>
+    <linearGradient id="beam" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff6dd" stop-opacity=".75"/>
+      <stop offset="1" stop-color="#fff6dd" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="#150809"/>
+
+  <!-- Screen. -->
+  <path d="M17 19 H47 L51 47 H13 Z" fill="url(#screen)"/>
+  <!-- The throw of the projector, falling down the picture. The light, not a shape. -->
+  <path d="M29 19 H35 L41 47 H23 Z" fill="url(#beam)"/>
+
+  <!-- Curtains, parted, hung to the floor. Two folds a side is all that survives. -->
+  <path d="M4 14 H18 V57 Q13 53 9.5 57 Q6.5 60 4 57 Z" fill="url(#curtain)"/>
+  <path d="M60 14 H46 V57 Q51 53 54.5 57 Q57.5 60 60 57 Z" fill="url(#curtain)"/>
+  <path d="M11 16 V55" stroke="#570c13" stroke-width="1.6" opacity=".7" fill="none"/>
+  <path d="M53 16 V55" stroke="#570c13" stroke-width="1.6" opacity=".7" fill="none"/>
+
+  <!-- Pelmet: ties the two curtains into one proscenium, with a gold rail. -->
+  <path d="M4 10 H60 V15 Q32 19.5 4 15 Z" fill="#8e1622"/>
+  <path d="M4 10 H60 V12.5 H4 Z" fill="#e6b23e"/>
+</svg>
