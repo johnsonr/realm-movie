@@ -144,7 +144,18 @@
   .row{display:flex; gap:8px; flex-wrap:wrap}
   input[type=text]{flex:1 1 220px; background:var(--surface-2); border:1px solid var(--border); color:var(--text);
     padding:11px 13px; border-radius:2px; font-size:.95rem; font-family:inherit;}
-  input[type=text]:focus{outline:none; border-color:var(--amber)}
+  input[type=text]:focus,input[type=number]:focus{outline:none; border-color:var(--amber)}
+  .discover-filters{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-bottom:18px}
+  .filter-group{min-width:0; margin:0; padding:12px 14px 14px; border:1px solid var(--border); background:var(--surface-2)}
+  .filter-group legend{padding:0 7px; color:var(--amber-soft); font-family:var(--font-label); font-size:.72rem;
+    letter-spacing:var(--label-tracking); text-transform:uppercase}
+  .filter-pair{display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); gap:9px; align-items:end}
+  .filter-pair label{min-width:0; color:var(--dim); font-family:var(--font-label); font-size:.66rem;
+    letter-spacing:var(--label-tracking); text-transform:uppercase}
+  .filter-pair input[type=number]{display:block; width:100%; box-sizing:border-box; margin-top:6px; padding:9px 10px;
+    background:var(--panel-deep); border:1px solid var(--border); border-radius:2px; color:var(--text); font:inherit; color-scheme:dark}
+  .filter-dash{align-self:end; padding-bottom:9px; color:var(--dim)}
+  .discover-settings-rule{height:1px; margin:2px 0 16px; background:var(--border)}
   .slider-head{display:flex; justify-content:space-between; align-items:baseline; font-family:var(--font-label); font-size:.8rem; letter-spacing:var(--label-tracking); text-transform:uppercase; color:var(--dim)}
   .slider-head span.val{color:var(--amber-soft); text-transform:none; letter-spacing:.03em; font-style:italic; font-size:.9rem}
   input[type=range]{width:100%; margin:10px 0 4px; accent-color:var(--amber); background:transparent}
@@ -267,6 +278,7 @@
   @media (max-width:560px){
     .modal-shell{padding:16px}.rating-star{font-size:1.32rem}.heading-row{align-items:flex-start}.heading-row .btn{white-space:nowrap}
     .rating-starter{display:block}.rating-starter .btn{margin-top:16px}.rating-starter::after{right:-12px}
+    .discover-filters{grid-template-columns:1fr}
     .cinema-progress{grid-template-columns:70px minmax(0,1fr); gap:12px; padding:12px}.film-spool{transform:scale(.78); transform-origin:left center}
   }
   @media (prefers-reduced-motion:reduce){
@@ -337,11 +349,30 @@
 
   <section id="sec-discover">
     <div class="panel">
-      <h2>Adventurousness</h2>
+      <h2>Discover settings</h2>
+      <div class="discover-filters">
+        <fieldset class="filter-group">
+          <legend>Release year</legend>
+          <div class="filter-pair">
+            <label>From<input type="number" id="min-year" min="1888" step="1" value="1900" inputmode="numeric"></label>
+            <span class="filter-dash" aria-hidden="true">—</span>
+            <label>To<input type="number" id="max-year" min="1888" step="1" value="2026" inputmode="numeric"></label>
+          </div>
+        </fieldset>
+        <fieldset class="filter-group">
+          <legend>Length · minutes</legend>
+          <div class="filter-pair">
+            <label>Min<input type="number" id="min-runtime" min="1" max="600" step="1" value="60" inputmode="numeric"></label>
+            <span class="filter-dash" aria-hidden="true">—</span>
+            <label>Max<input type="number" id="max-runtime" min="1" max="600" step="1" value="240" inputmode="numeric"></label>
+          </div>
+        </fieldset>
+      </div>
+      <div class="discover-settings-rule"></div>
       <div class="slider-head"><span>How far to push you</span><span class="val" id="daring-label"></span></div>
       <input type="range" id="daring" min="0" max="100" step="5" value="35">
       <div class="ticks"><span>Safe</span><span>Familiar</span><span>Stretching</span><span>Radical</span></div>
-      <div class="note" style="margin-top:8px">Applies to the panels below and to every "More like this" button.</div>
+      <div class="note" style="margin-top:8px">Year, length and adventurousness apply to every search below and every "More like this" button.</div>
     </div>
     <div class="panel">
       <h2>Films like…</h2>
@@ -454,12 +485,12 @@ LIMIT 50</pre>
 RETURN ts.summary AS summary, ts.count AS count</pre>
 
       <h3 class="step">Films like… / More like this (saved view)</h3>
-      <div class="why">A parameterised virtual view, and the same one behind both the Discover search box and the per-card button. The properties in the braces aren't filters over existing nodes — they're <em>arguments</em>. The Adventurousness slider is passed straight in as <span class="meta">steer</span>, which is why the same title returns different films at Safe and at Radical.</div>
+      <div class="why">A parameterised virtual view, and the same one behind both the Discover search box and the per-card button. The properties in the braces aren't filters over existing nodes — they're <em>arguments</em>. The shared year and runtime bounds constrain both generation and its resolved OMDb results; Adventurousness is passed as <span class="meta">steer</span>.</div>
       <pre class="cy">MATCH (x:MoviesLike {
   movie:    $movie,     // the card's own title, or your typed one
   steer:    $steer,     // the slider's prose hint
-  minYear:  1900,
-  maxYear:  2100
+  minYear:  $minYear,   maxYear: $maxYear,
+  minRuntime: $minRuntime, maxRuntime: $maxRuntime
 })
 RETURN x LIMIT 12
 // results then filtered against your seen-set, client side</pre>
@@ -470,12 +501,16 @@ RETURN x LIMIT 12
 MATCH (ts)-[:SUGGESTS {ai: {hint: $steer}}]-&gt;(m:Movie)
 WHERE NOT EXISTS { (me)-[:RATED]-&gt;(seen:MovieRating)
                    WHERE seen.imdbId = m.imdbId }
+  AND m.year &gt;= $minYear AND m.year &lt;= $maxYear
+  AND m.runtimeMinutes &gt;= $minRuntime AND m.runtimeMinutes &lt;= $maxRuntime
 RETURN DISTINCT m LIMIT 12</pre>
 
       <h3 class="step">New &amp; now (saved view)</h3>
       <div class="why">The same taste chain over a different edge — <span class="meta">SUGGESTS_NEW</span> — whose producer is <em>web-grounded</em>: what's newly in cinemas or fresh on streaming isn't something a model can recall, so it searches the live web, then resolves each find through OMDb before it becomes a Movie node here.</div>
       <pre class="cy">MATCH (x:NewReleases {
-  steer:    $steer      // slider hint + your own words
+  steer: $steer,        // slider hint + your own words
+  minYear: $minYear, maxYear: $maxYear,
+  minRuntime: $minRuntime, maxRuntime: $maxRuntime
 })
 RETURN x LIMIT 12</pre>
 
@@ -703,6 +738,32 @@ var DARING=[
   {max:70,name:'Stretching',hint:'deliberately stretch the viewer: adjacent directors, decades, countries and genres they have not explored, while keeping a clear line back to what they love'},
   {max:100,name:'Radical',hint:'push the viewer hard: unfamiliar national cinemas, silent and early film, documentary, experimental and formally difficult work that challenges rather than confirms their established taste'}
 ];
+var CURRENT_YEAR=new Date().getFullYear();
+el('min-year').max=String(CURRENT_YEAR);
+el('max-year').max=String(CURRENT_YEAR);
+el('max-year').value=String(CURRENT_YEAR);
+
+function discoverInteger(id,label,min,max){
+  var input=el(id), raw=String(input.value||'').trim(), value=Number(raw);
+  if(!raw||!Number.isInteger(value)||value<min||value>max){
+    throw new Error(label+' must be a whole number from '+min+' to '+max+'.');
+  }
+  return value;
+}
+function discoverFilters(){
+  var filters={
+    minYear:discoverInteger('min-year','Earliest year',1888,CURRENT_YEAR),
+    maxYear:discoverInteger('max-year','Latest year',1888,CURRENT_YEAR),
+    minRuntime:discoverInteger('min-runtime','Minimum length',1,600),
+    maxRuntime:discoverInteger('max-runtime','Maximum length',1,600)
+  };
+  if(filters.minYear>filters.maxYear) throw new Error('Earliest year cannot be later than latest year.');
+  if(filters.minRuntime>filters.maxRuntime) throw new Error('Minimum length cannot be greater than maximum length.');
+  return filters;
+}
+function discoverFilterLabel(filters){
+  return filters.minYear+'–'+filters.maxYear+' · '+filters.minRuntime+'–'+filters.maxRuntime+' minutes';
+}
 function daringBand(){
   var v=parseInt(el('daring').value,10);
   for(var i=0;i<DARING.length;i++){ if(v<=DARING[i].max) return DARING[i]; }
@@ -728,10 +789,14 @@ function filmCard(m,idx,depth){
   var more=(depth<2)?'<button class="btn ghost" data-act="more" data-i="'+idx+'">More like this</button>':'';
   var saved=m.imdbId&&SAVED_IDS[m.imdbId];
   var save=m.imdbId?'<button class="btn ghost" data-act="save" data-i="'+idx+'"'+(saved?' disabled':'')+'>'+(saved?'Saved':'Save for later')+'</button>':'';
+  var meta=[];
+  if(m.genre) meta.push(escapeHtml(m.genre));
+  if(m.runtimeMinutes&&m.runtimeMinutes!=='N/A') meta.push(escapeHtml(String(m.runtimeMinutes).replace(/\s*min$/i,'')+' min'));
+  if(imdb) meta.push(imdb);
   return '<div class="card">'+poster+'<div class="body">'+stars+
     '<h3>'+escapeHtml(m.title)+(m.year?' <span class="meta">('+escapeHtml(String(m.year))+')</span>':'')+'</h3>'+
     '<div class="byline">'+escapeHtml(m.director||'')+'</div>'+
-    '<div class="meta">'+escapeHtml(m.genre||'')+(imdb?' · '+imdb:'')+'</div>'+
+    '<div class="meta">'+meta.join(' · ')+'</div>'+
     (m.plot?'<div class="plot">'+escapeHtml(m.plot)+'</div>':'')+
     '<div class="actions">'+
       '<button class="btn ghost" data-act="watch" data-i="'+idx+'">Where to watch</button>'+
@@ -755,6 +820,7 @@ function renderFilms(node,films,depth){
 }
 function normalise(x){
   return {title:x.title, year:x.year, director:x.director, genre:x.genre, imdbId:x.imdbId,
+          runtimeMinutes:x.runtimeMinutes!=null?x.runtimeMinutes:x.runtime,
           poster:x.poster, plot:x.plot||x.Plot, rating:x.rating, notes:x.notes, watchedOn:x.watchedOn};
 }
 
@@ -832,22 +898,25 @@ async function loadWatchlist(){
   }catch(e){fail(node,e);}
 }
 
-async function fetchLike(title,steer,limit,node){
+async function fetchLike(title,steer,limit,node,filters){
   var r=await kgQueryWithProgress({
-    cypher:"MATCH (x:MoviesLike {movie: $movie, steer: $steer, minYear: 1900, maxYear: 2100}) RETURN x LIMIT "+limit,
-    params:JSON.stringify({movie:title,steer:steer})
+    cypher:"MATCH (x:MoviesLike {movie: $movie, steer: $steer, minYear: $minYear, maxYear: $maxYear, minRuntime: $minRuntime, maxRuntime: $maxRuntime}) RETURN x LIMIT "+limit,
+    params:JSON.stringify({movie:title,steer:steer,minYear:filters.minYear,maxYear:filters.maxYear,
+      minRuntime:filters.minRuntime,maxRuntime:filters.maxRuntime})
   },node);
   if(r.warnings&&r.warnings.length) throw new Error(r.warnings.join(' · '));
   return r.rows.map(function(row){return normalise(row.x||row);}).filter(function(m){return !alreadySeen(m);});
 }
 
 async function loadMoreLike(m,box,depth){
-  var band=daringBand();
-  busy(box,'Following the thread from '+m.title+' — '+band.name.toLowerCase()+' picks…','Asking the AI film curator for unseen matches…');
+  var band=daringBand(), filters;
+  try{filters=discoverFilters();}catch(e){fail(box,e);return;}
+  busy(box,'Following the thread from '+m.title+' — '+band.name.toLowerCase()+' picks…',
+    'Looking for unseen films from '+discoverFilterLabel(filters)+'…');
   try{
-    var films=await fetchLike(m.title,band.hint,12,box);
+    var films=await fetchLike(m.title,band.hint,12,box,filters);
     if(!films.length){
-      box.innerHTML='<div class="note">Everything that came back you have already rated. Push the Adventurousness slider up and try again.</div>';
+      box.innerHTML='<div class="note">Nothing unseen matched these year and length settings. Widen the ranges or push Adventurousness up and try again.</div>';
       return;
     }
     box.innerHTML='<div class="thread">Unseen films in the orbit of '+escapeHtml(m.title)+' · '+escapeHtml(band.name)+'</div><div id="thread-'+depth+'-'+(++seq)+'"></div>';
@@ -1009,18 +1078,22 @@ async function loadTaste(){
 async function loadSimilar(){
   var node=el('similar-out'); var q=el('q-similar').value.trim();
   if(!q){node.innerHTML='<div class="note">Name a film first.</div>';return;}
-  var band=daringBand();
-  busy(node,'Screening the archive — '+band.name.toLowerCase()+' picks…','Asking the AI film curator for unseen matches…');
+  var band=daringBand(), filters;
+  try{filters=discoverFilters();}catch(e){fail(node,e);return;}
+  busy(node,'Screening the archive — '+band.name.toLowerCase()+' picks…',
+    'Looking for unseen films from '+discoverFilterLabel(filters)+'…');
   try{
-    var films=await fetchLike(q,band.hint,12,node);
-    if(!films.length){node.innerHTML='<div class="note">Nothing unseen came back for that title — try the full name as released, or a bolder setting.</div>';return;}
+    var films=await fetchLike(q,band.hint,12,node,filters);
+    if(!films.length){node.innerHTML='<div class="note">Nothing unseen matched that title and these year and length settings — widen the ranges, try the full title, or choose a bolder setting.</div>';return;}
     renderFilms(node,films.slice(0,10),0);
   }catch(e){fail(node,e);}
 }
 
 async function loadRecs(){
-  var node=el('recs-out'); var band=daringBand();
-  busy(node,'Programming a '+band.name.toLowerCase()+' season for you…','Reading your taste, then asking the AI personal programmer…');
+  var node=el('recs-out'); var band=daringBand(), filters;
+  try{filters=discoverFilters();}catch(e){fail(node,e);return;}
+  busy(node,'Programming a '+band.name.toLowerCase()+' season for you…',
+    'Reading your taste for films from '+discoverFilterLabel(filters)+'…');
   try{
     var steer=el('q-steer').value.trim();
     var hint=band.hint+(steer?('; also: '+steer):'');
@@ -1028,29 +1101,35 @@ async function loadRecs(){
       cypher:"MATCH (me:AssistantUser)-[:HAS_MOVIE_TASTE_SUMMARY]->(ts:MovieTasteSummary) "+
         "MATCH (ts)-[:SUGGESTS {ai: {hint: $steer}}]->(m:Movie) "+
         "WHERE NOT EXISTS { (me)-[:RATED]->(seen:MovieRating) WHERE seen.imdbId = m.imdbId } "+
+        "AND m.year >= $minYear AND m.year <= $maxYear "+
+        "AND m.runtimeMinutes >= $minRuntime AND m.runtimeMinutes <= $maxRuntime "+
       "RETURN DISTINCT m LIMIT 12",
-      params:JSON.stringify({steer:hint})
+      params:JSON.stringify({steer:hint,minYear:filters.minYear,maxYear:filters.maxYear,
+        minRuntime:filters.minRuntime,maxRuntime:filters.maxRuntime})
     },node);
     if(r.warnings&&r.warnings.length){node.innerHTML='<div class="err">'+escapeHtml(r.warnings.join(' · '))+'</div>';return;}
     var films=r.rows.map(function(row){return normalise(row.m||row);}).filter(function(m){return !alreadySeen(m);});
-    if(!films.length){node.innerHTML='<div class="note">Everything suggested you have already rated. Push the slider up and try again.</div>';return;}
+    if(!films.length){node.innerHTML='<div class="note">Nothing unseen matched your taste and these year and length settings. Widen the ranges or push Adventurousness up and try again.</div>';return;}
     renderFilms(node,films.slice(0,10),0);
   }catch(e){fail(node,e);}
 }
 
 async function loadNew(){
-  var node=el('new-out'); var band=daringBand();
-  busy(node,'Searching the web for what is newly out…','Checking live release coverage, then resolving each film…');
+  var node=el('new-out'); var band=daringBand(), filters;
+  try{filters=discoverFilters();}catch(e){fail(node,e);return;}
+  busy(node,'Searching the web for what is newly out…',
+    'Checking live releases from '+discoverFilterLabel(filters)+'…');
   try{
     var steer=el('q-new').value.trim();
     var hint=band.hint+(steer?('; also: '+steer):'');
     var r=await kgQueryWithProgress({
-      cypher:"MATCH (x:NewReleases {steer: $steer}) RETURN x LIMIT 12",
-      params:JSON.stringify({steer:hint})
+      cypher:"MATCH (x:NewReleases {steer: $steer, minYear: $minYear, maxYear: $maxYear, minRuntime: $minRuntime, maxRuntime: $maxRuntime}) RETURN x LIMIT 12",
+      params:JSON.stringify({steer:hint,minYear:filters.minYear,maxYear:filters.maxYear,
+        minRuntime:filters.minRuntime,maxRuntime:filters.maxRuntime})
     },node);
     if(r.warnings&&r.warnings.length){node.innerHTML='<div class="err">'+escapeHtml(r.warnings.join(' · '))+'</div>';return;}
     var films=r.rows.map(function(row){return normalise(row.x||row);}).filter(function(m){return !alreadySeen(m);});
-    if(!films.length){node.innerHTML='<div class="note">Nothing newly released matched your taste this time — try a steer, or push the slider up.</div>';return;}
+    if(!films.length){node.innerHTML='<div class="note">Nothing newly released matched your taste and these year and length settings — widen the ranges or try another steer.</div>';return;}
     renderFilms(node,films.slice(0,10),0);
   }catch(e){fail(node,e);}
 }

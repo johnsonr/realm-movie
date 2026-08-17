@@ -14,7 +14,7 @@ description: |
   unseen ones, see where each streams, read the taste summary the
   ratings add up to, and find newly released films matching that taste
   via live web search — under a choice of cinema themes.
-version: 0.6.0
+version: 0.6.1
 author: Rod Johnson
 url: https://github.com/johnsonr/realm-movie
 icon: icon.svg

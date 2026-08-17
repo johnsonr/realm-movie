@@ -42,7 +42,7 @@
 # similars to ANY film you can name, rated or not. `movie` has no default (a "like what?" view is
 # meaningless bare), so it must be supplied inline:
 #   MATCH (m:MoviesLike {movie: 'Heat'}) RETURN m
-#   MATCH (m:MoviesLike {movie: 'Heat', steer: 'slow-burn, European', minYear: 1990}) RETURN m
+#   MATCH (m:MoviesLike {movie: 'Heat', steer: 'slow-burn, European', minYear: 1990, maxRuntime: 110}) RETURN m
 - name: MoviesLike
   description: Films similar to one named film, excluding anything you've already rated. Name the film via the `movie` param.
   outputLabel: Movie
@@ -60,14 +60,23 @@
       description: "Only include films released in or after this year."
     maxYear:
       type: int
-      default: 2100
+      default: 2026
       description: "Only include films released in or before this year."
+    minRuntime:
+      type: int
+      default: 60
+      description: "Only include films at least this many minutes long."
+    maxRuntime:
+      type: int
+      default: 240
+      description: "Only include films at most this many minutes long."
   cypher: |
     MATCH (me:AssistantUser)
     MATCH (rt:MovieRating {title: $movie})-[:SIMILAR_TO {ai: {hint: $steer}}]->(m:Movie)
     WHERE NOT EXISTS { (me)-[:RATED]->(seen:MovieRating) WHERE seen.imdbId = m.imdbId }
       AND toLower(m.title) <> toLower($movie)
       AND m.year >= $minYear AND m.year <= $maxYear
+      AND m.runtimeMinutes >= $minRuntime AND m.runtimeMinutes <= $maxRuntime
     RETURN DISTINCT m
 
 # Recommendations from your TASTE AS A WHOLE that you can stream now, INCLUDED with one of your own
@@ -94,13 +103,22 @@
       description: "Only include films released in or after this year."
     maxYear:
       type: int
-      default: 2100
+      default: 2026
       description: "Only include films released in or before this year."
+    minRuntime:
+      type: int
+      default: 60
+      description: "Only include films at least this many minutes long."
+    maxRuntime:
+      type: int
+      default: 240
+      description: "Only include films at most this many minutes long."
   cypher: |
     MATCH (me:AssistantUser)-[:HAS_MOVIE_TASTE_SUMMARY]->(ts:MovieTasteSummary)
     MATCH (ts)-[:SUGGESTS {ai: {hint: $steer}}]->(m:Movie)
     WHERE NOT EXISTS { (me)-[:RATED]->(seen:MovieRating) WHERE seen.imdbId = m.imdbId }
       AND m.year >= $minYear AND m.year <= $maxYear
+      AND m.runtimeMinutes >= $minRuntime AND m.runtimeMinutes <= $maxRuntime
     MATCH (m)-[ao:AVAILABLE_ON]->(s:StreamingService)
     WHERE ao.offerType = 'subscription'
       AND EXISTS { (me)-[:SUBSCRIBES_TO]->(:UserStreamingSubscription {serviceId: s.serviceId}) }
@@ -122,13 +140,22 @@
       description: "Only include films released in or after this year."
     maxYear:
       type: int
-      default: 2100
+      default: 2026
       description: "Only include films released in or before this year."
+    minRuntime:
+      type: int
+      default: 60
+      description: "Only include films at least this many minutes long."
+    maxRuntime:
+      type: int
+      default: 240
+      description: "Only include films at most this many minutes long."
   cypher: |
     MATCH (me:AssistantUser)-[:RATED]->(rt:MovieRating) WHERE rt.rating <= 4
     MATCH (rt)-[:SIMILAR_TO]->(m:Movie)
     WHERE NOT EXISTS { (me)-[:RATED]->(seen:MovieRating) WHERE seen.imdbId = m.imdbId }
       AND m.year >= $minYear AND m.year <= $maxYear
+      AND m.runtimeMinutes >= $minRuntime AND m.runtimeMinutes <= $maxRuntime
     RETURN DISTINCT m
 
 # Film-noir picks, drawn from your taste (similars to your loved films, kept if the genre matches).
@@ -146,14 +173,23 @@
       description: "Only include films released in or after this year."
     maxYear:
       type: int
-      default: 2100
+      default: 2026
       description: "Only include films released in or before this year."
+    minRuntime:
+      type: int
+      default: 60
+      description: "Only include films at least this many minutes long."
+    maxRuntime:
+      type: int
+      default: 240
+      description: "Only include films at most this many minutes long."
   cypher: |
     MATCH (me:AssistantUser)-[:RATED]->(rt:MovieRating) WHERE rt.rating >= 8
     MATCH (rt)-[:SIMILAR_TO {ai: {hint: $steer}}]->(m:Movie)
     WHERE NOT EXISTS { (me)-[:RATED]->(seen:MovieRating) WHERE seen.imdbId = m.imdbId }
       AND m.genre CONTAINS 'Noir'
       AND m.year >= $minYear AND m.year <= $maxYear
+      AND m.runtimeMinutes >= $minRuntime AND m.runtimeMinutes <= $maxRuntime
     RETURN DISTINCT m
 
 # Your film taste in ~100 words — the fan-IN MovieTasteSummary node, synthesized from every rating you've
@@ -196,13 +232,22 @@
       description: "Only include films released in or after this year."
     maxYear:
       type: int
-      default: 2100
+      default: 2026
       description: "Only include films released in or before this year."
+    minRuntime:
+      type: int
+      default: 60
+      description: "Only include films at least this many minutes long."
+    maxRuntime:
+      type: int
+      default: 240
+      description: "Only include films at most this many minutes long."
   cypher: |
     MATCH (me:AssistantUser)-[:HAS_MOVIE_TASTE_SUMMARY]->(ts:MovieTasteSummary)
     MATCH (ts)-[:SUGGESTS {ai: {hint: $steer}}]->(m:Movie)
     WHERE NOT EXISTS { (me)-[:RATED]->(seen:MovieRating) WHERE seen.imdbId = m.imdbId }
       AND m.year >= $minYear AND m.year <= $maxYear
+      AND m.runtimeMinutes >= $minRuntime AND m.runtimeMinutes <= $maxRuntime
     RETURN DISTINCT m.title AS title, m.year AS year, m.genre AS genre, m.country AS country,
            m.director AS director, m.runtimeMinutes AS runtime, m.imdbRating AS imdbRating,
            m.plot AS plot, 'https://www.imdb.com/title/' + m.imdbId + '/' AS imdbUrl
@@ -222,10 +267,28 @@
       type: string
       default: ""
       description: "A soft steer for the picks ('in cinemas only', 'sci-fi', 'something gentle'). Empty = unsteered."
+    minYear:
+      type: int
+      default: 1900
+      description: "Only include films released in or after this year."
+    maxYear:
+      type: int
+      default: 2026
+      description: "Only include films released in or before this year."
+    minRuntime:
+      type: int
+      default: 60
+      description: "Only include films at least this many minutes long."
+    maxRuntime:
+      type: int
+      default: 240
+      description: "Only include films at most this many minutes long."
   cypher: |
     MATCH (me:AssistantUser)-[:HAS_MOVIE_TASTE_SUMMARY]->(ts:MovieTasteSummary)
     MATCH (ts)-[:SUGGESTS_NEW {ai: {hint: $steer}}]->(m:Movie)
     WHERE NOT EXISTS { (me)-[:RATED]->(seen:MovieRating) WHERE seen.imdbId = m.imdbId }
+      AND m.year >= $minYear AND m.year <= $maxYear
+      AND m.runtimeMinutes >= $minRuntime AND m.runtimeMinutes <= $maxRuntime
     RETURN DISTINCT m
 
 # ── Multi-person views ──────────────────────────────────────────────────────────────────────

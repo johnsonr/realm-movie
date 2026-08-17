@@ -21,12 +21,17 @@ owns the persistence and the UI.
 | `skills/recommend-movie/` | "What should I watch?" / "where can I stream X?" — owns the OMDb + Streaming Availability workflow and the cardinal rules (don't default the country; the response field is `streamingOptions`, not `streamingInfo`). Activates only for the recommend / availability paths. |
 | `skills/rate-movie/` | "I just watched X, give it N" — resolves the film on OMDb, then creates or updates the `MovieRating` (keyed by rater + imdbId). Nothing else is persisted: the `RATED` user edge is automatic, and the `(MovieRating)-[:OF]->(Movie)` spine edge is a virtual join (`producers/movie.yml`), materialized on demand from the rating's imdbId. |
 | `skills/recall-movies/` | "What did I think of X?" / "what have I rated?" — reads `MovieRating` via `list_entries` for single-title recall, or Cypher for anything cross-cutting. |
+| `personalities/roger/` | Ebert-style film-critic voice — used only by the recommend write-up. Rate confirmations and recall replies stay in the default assistant voice. |
 
 The Want to See list is persisted as
 `(me:AssistantUser)-[:WANTS_TO_SEE]->(w:MovieWatchlistEntry)`. Each entry is keyed by
 `<userId>::<imdbId>`, so saving a film twice updates one node. Its `OF` relationship uses the
 same IMDb-backed virtual movie spine as ratings when full metadata is needed.
-| `personalities/roger/` | Ebert-style film-critic voice — used only by the recommend write-up. Rate confirmations and recall replies stay in the default assistant voice. |
+
+Discover has shared release-year and runtime bounds above its search modes. They default to
+1900–the current year and 60–240 minutes, and are passed into `MoviesLike`, taste-based picks,
+new releases, and every card's “More like this” traversal. These are Cypher/view constraints,
+not client-side hiding: they guide generation and constrain the resolved Movie records.
 
 ## Sample queries
 
