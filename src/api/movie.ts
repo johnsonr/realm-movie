@@ -1,10 +1,9 @@
 import { Entity } from "@embabel/runtime-types";
-// Build-time metadata: read off the AST by `embabel-build-manifest` and stripped before
-// anything runs. The separate import path is the boundary — nothing here survives into the
-// running realm. See `../realm-spec/DECLARING_TYPES.md`.
+// Schema metadata is read off the AST by `embabel-build-manifest`. The local implementations
+// are intentional no-ops when the compiled realm module is loaded.
 import {
   Id, Node, Property, Relationship, Retrieval, VirtualJoin,
-} from "@embabel/runtime-types/decorators";
+} from "./schema-decorators";
 
 // ─── Data shapes ────────────────────────────────────────────────────────────
 // Plain records the methods read or write. They have no behaviour and are not nodes, so
@@ -31,6 +30,25 @@ export interface MovieRatingInput {
   notes?: string;
   /** Optional ISO-8601 date the movie was watched. */
   watchedOn?: string;
+}
+
+/** The persisted per-user record behind the "Want to See" list. */
+export interface MovieWatchlistInput {
+  /** Identity key — `<userId>::<imdbId>`, so saving twice updates one entry. */
+  watchlistKey: string;
+  /** Current user's graph id. */
+  userId: string;
+  /** IMDb id of the saved Movie. */
+  imdbId: string;
+  /** Film metadata denormalised so listing the watchlist is an immediate stored-data read. */
+  title: string;
+  year?: number;
+  director?: string;
+  genre?: string;
+  poster?: string;
+  plot?: string;
+  /** ISO-8601 timestamp when the film was most recently saved. */
+  addedOn: string;
 }
 
 /** The current user's identity, read from the scoped graph to attribute their own ratings. */
@@ -85,7 +103,9 @@ export interface RatingEntry {
 interface MovieGateway {
   streamingAvailability: { getShow(args: { id: string; country: string }): Promise<StreamingShow> };
   omdb: { getMovie(args: { i: string; plot: string }): Promise<OmdbMovie> };
-  repository: { createEntry(args: { type: string; data: MovieRatingInput }): Promise<RatingEntry> };
+  repository: {
+    createEntry(args: { type: string; data: MovieRatingInput | MovieWatchlistInput }): Promise<RatingEntry>;
+  };
   kg: { query(args: { cypher: string; params: string }): Promise<{ rows?: CurrentUser[] } | CurrentUser[]> };
 }
 
@@ -256,6 +276,29 @@ export class Movie extends Entity {
       watchedOn: args.watchedOn,
     };
     return this.api.repository.createEntry({ type: "MovieRating", data });
+  }
+
+  /**
+   * Put this film on the CURRENT USER's persistent "Want to See" list. Identity is
+   * `<myId>::<imdbId>`, so saving it again refreshes the same node rather than duplicating it.
+   */
+  async saveForLater(): Promise<RatingEntry> {
+    const me = await this.currentUser();
+    const userId = me.id || "";
+    if (!userId) throw new Error("The current user could not be resolved.");
+    const data: MovieWatchlistInput = {
+      watchlistKey: `${userId}::${this.imdbId}`,
+      userId,
+      imdbId: this.imdbId,
+      title: this.title,
+      year: this.year,
+      director: this.director,
+      genre: this.genre,
+      poster: this.poster,
+      plot: this.plot,
+      addedOn: new Date().toISOString(),
+    };
+    return this.api.repository.createEntry({ type: "MovieWatchlistEntry", data });
   }
 
   /** The current user's own Person id + name, read from the scoped graph. */
@@ -505,6 +548,43 @@ export class MovieRating extends Entity {
       "and rank by how many loved films point at each candidate (`count(*) DESC`).",
   })
   declare similar: Movie[];
+}
+
+/**
+ * One film the current user wants to see. This is a REAL persisted node, reached through
+ * `(me:AssistantUser)-[:WANTS_TO_SEE]->(entry:MovieWatchlistEntry)`. Film metadata is copied
+ * onto the entry for fast list rendering; the virtual `OF` hop resolves the canonical Movie
+ * from IMDb when a query needs the full movie graph.
+ */
+@Node({ userAnchor: { predicate: "WANTS_TO_SEE", direction: "from-user" } })
+export class MovieWatchlistEntry extends Entity {
+  /** `<userId>::<imdbId>` — one saved entry per user and film. */
+  @Id() declare watchlistKey: string;
+
+  /** User who owns this list entry. */
+  declare userId: string;
+
+  /** IMDb identity of the saved film. */
+  declare imdbId: string;
+
+  /** Denormalised display fields for an immediate stored-data list read. */
+  declare title: string;
+  @Property({ type: "int" }) declare year?: number;
+  declare director?: string;
+  declare genre?: string;
+  declare poster?: string;
+  declare plot?: string;
+  declare addedOn: string;
+
+  /** Canonical movie metadata, resolved on demand from this entry's IMDb id. */
+  @Relationship({
+    type: "OF", producer: "movieByImdbId",
+    keyField: "imdbId", recordKeyField: "imdbId",
+    description:
+      "The canonical Movie this saved-list entry refers to. The watchlist node and WANTS_TO_SEE edge " +
+      "are persisted; this OF hop resolves full IMDb-backed film metadata on demand.",
+  })
+  declare movie: Movie;
 }
 
 /**

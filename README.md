@@ -17,12 +17,16 @@ owns the persistence and the UI.
 | Directory | What it contributes |
 |---|---|
 | `apis/` | Two OpenAPI 3 specs — OMDb (film metadata) and Streaming Availability (per-country streaming options). Calls go through `gateway.omdb.*` / `gateway.streamingAvailability.*` from `execute_javascript` / `execute_python`. |
-| `types/movies.yml` | `Movie` (canonical metadata, keyed by IMDb id) and `MovieRating` (the user's score for a Movie). Read/written via the world repository tools. `MovieRating` declares `userAnchor: { predicate: RATED, direction: from-user }`, so the assistant auto-emits `(User)-[:RATED]->(MovieRating)` on every `create_entry`. |
+| `src/api/movie.ts` | The graph model and its behaviour: `Movie` (canonical IMDb metadata), `MovieRating` (a person's score), and `MovieWatchlistEntry` (a real per-user Want to See record). Repository writes automatically anchor ratings with `RATED` and saved films with `WANTS_TO_SEE`; `Movie` methods provide streaming, details, ratings, saving, and inherited graph navigation. Built to `dist/`. See "Type methods" below. |
 | `skills/recommend-movie/` | "What should I watch?" / "where can I stream X?" — owns the OMDb + Streaming Availability workflow and the cardinal rules (don't default the country; the response field is `streamingOptions`, not `streamingInfo`). Activates only for the recommend / availability paths. |
 | `skills/rate-movie/` | "I just watched X, give it N" — resolves the film on OMDb, then creates or updates the `MovieRating` (keyed by rater + imdbId). Nothing else is persisted: the `RATED` user edge is automatic, and the `(MovieRating)-[:OF]->(Movie)` spine edge is a virtual join (`producers/movie.yml`), materialized on demand from the rating's imdbId. |
 | `skills/recall-movies/` | "What did I think of X?" / "what have I rated?" — reads `MovieRating` via `list_entries` for single-title recall, or Cypher for anything cross-cutting. |
+
+The Want to See list is persisted as
+`(me:AssistantUser)-[:WANTS_TO_SEE]->(w:MovieWatchlistEntry)`. Each entry is keyed by
+`<userId>::<imdbId>`, so saving a film twice updates one node. Its `OF` relationship uses the
+same IMDb-backed virtual movie spine as ratings when full metadata is needed.
 | `personalities/roger/` | Ebert-style film-critic voice — used only by the recommend write-up. Rate confirmations and recall replies stay in the default assistant voice. |
-| `src/api/movie.ts` | The **`Movie` type** — a TypeScript class `extends Entity`. Its fields are the shape; its async methods (`movie.streaming`, `movie.details`, `movie.rate`, plus inherited `movie.neighbors`) are affordances callable on an in-scope object. Built to `dist/`. See "Type methods" below. |
 
 ## Sample queries
 

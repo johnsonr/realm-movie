@@ -72,6 +72,36 @@ describe("Movie.rate", () => {
   });
 });
 
+describe("Movie.saveForLater", () => {
+  it("persists one user-anchored watchlist entry keyed by user and IMDb id", async () => {
+    const createEntry = vi.fn().mockResolvedValue({ id: "watch1" });
+    const query = vi.fn().mockResolvedValue({ rows: [{ id: "rod_johnson_assistant" }] });
+    const movie = entityForTest(
+      Movie,
+      {
+        imdbId: "tt0038355", title: "The Big Sleep", year: 1946,
+        director: "Howard Hawks", genre: "Crime, Film-Noir", poster: "https://poster.example/big-sleep.jpg",
+        plot: "Philip Marlowe is drawn into the affairs of the Sternwood family.",
+      },
+      mockGateway<GenericGatewayContext>({ repository: { createEntry }, kg: { query } }),
+    );
+
+    await movie.saveForLater();
+
+    expect(createEntry).toHaveBeenCalledWith({
+      type: "MovieWatchlistEntry",
+      data: expect.objectContaining({
+        watchlistKey: "rod_johnson_assistant::tt0038355",
+        userId: "rod_johnson_assistant",
+        imdbId: "tt0038355",
+        title: "The Big Sleep",
+        year: 1946,
+        addedOn: expect.any(String),
+      }),
+    });
+  });
+});
+
 describe("Movie.neighbors (inherited from Entity)", () => {
   it("walks the graph from this movie's id via kg.neighbors — no per-type code", async () => {
     const neighbors = vi.fn().mockResolvedValue([{ id: "p1", label: "Person", name: "Linda Fiorentino" }]);

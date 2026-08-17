@@ -291,6 +291,7 @@
 <main>
   <nav>
     <button id="tab-seen" class="active">Films You've Rated</button>
+    <button id="tab-watchlist">Want to See</button>
     <button id="tab-discover">Discover</button>
     <button id="tab-pair">Score a Film</button>
     <button id="tab-ask">Ask</button>
@@ -321,6 +322,16 @@
       </div>
       <div class="note" style="margin-top:8px">Use <strong>More like this</strong> on any film to walk outward into pictures you haven't rated.</div>
       <div id="rated-out" class="scroller" style="margin-top:14px"></div>
+    </div>
+  </section>
+
+  <section id="sec-watchlist">
+    <div class="panel">
+      <div class="heading-row">
+        <h2 id="watchlist-heading">Want to See</h2>
+      </div>
+      <div class="note">A real saved list in your film graph. Use <strong>Save for later</strong> on any film card to add to it.</div>
+      <div id="watchlist-out" class="scroller" style="margin-top:14px"></div>
     </div>
   </section>
 
@@ -415,6 +426,11 @@ LIMIT 200</pre>
     notes, watchedOn
   }
 })</pre>
+
+      <h3 class="step">Want to See</h3>
+      <div class="why">This is saved graph data, not a browser bookmark. Each film becomes one <span class="meta">MovieWatchlistEntry</span> anchored to you by <span class="meta">WANTS_TO_SEE</span>; the user-and-IMDb identity prevents duplicates.</div>
+      <pre class="cy">MATCH (me:AssistantUser)-[:WANTS_TO_SEE]-&gt;(w:MovieWatchlistEntry)
+RETURN w ORDER BY w.addedOn DESC</pre>
 
       <h3 class="step">Everything you've already seen</h3>
       <div class="why">Loaded once at startup into a set of IMDb ids and normalised titles. Every recommendation and every "More like this" result is filtered against it, so nothing you've rated can come back as a suggestion.</div>
@@ -618,17 +634,29 @@ function ensureProgress(){
   if(!progressTicker) progressTicker=setInterval(tickProgress,1000);
   if(E&&E.progress&&!unsubscribeProgress) unsubscribeProgress=E.progress.subscribe(onProducerProgress);
 }
-function busy(node,label){
+function busy(node,label,detail){
   var now=Date.now(), operationId='picture-'+(++progressOperationSeq)+'-'+Math.random().toString(36).slice(2,8);
   node.innerHTML='<div class="cinema-progress" role="status" aria-live="polite" data-started="'+now+'" data-last-event="'+now+'" data-operation-id="'+operationId+'">'+
     '<div class="film-spool" aria-hidden="true"><span class="film-reel first"></span><span class="film-reel second"></span><span class="film-thread"></span></div>'+
-    '<div><div class="cinema-progress-message">'+escapeHtml(label)+'</div><div class="cinema-progress-detail">Planning the Virtual Cypher route…</div>'+
+    '<div><div class="cinema-progress-message">'+escapeHtml(label)+'</div><div class="cinema-progress-detail">'+escapeHtml(detail||'Preparing your request…')+'</div>'+
     '<div class="cinema-progress-track" aria-hidden="true"><span class="cinema-progress-fill"></span></div>'+
     '<div class="cinema-progress-meta"><span class="cinema-progress-count">Film spooling</span><span class="cinema-progress-elapsed">0s</span></div></div></div>';
   ensureProgress();
   return operationId;
 }
-function fail(node,e){node.innerHTML='<div class="err">'+escapeHtml(e&&e.message?e.message:String(e))+'</div>';}
+function busyDetail(node,detail){
+  var progress=node&&node.querySelector('.cinema-progress'), target=progress&&progress.querySelector('.cinema-progress-detail');
+  if(!target) return;
+  progress.setAttribute('data-last-event',String(Date.now()));
+  target.textContent=detail;
+  target.removeAttribute('data-stalled');
+}
+function friendlyError(e){
+  var message=e&&e.message?e.message:String(e);
+  if(/tool\s+\S+\s+HTTP\s+401/i.test(message)) return 'Your Picture Palace session has expired. Refresh the page and try again.';
+  return message;
+}
+function fail(node,e){node.innerHTML='<div class="err">'+escapeHtml(friendlyError(e))+'</div>';}
 
 // The generated gateway currently cannot attach the correlation header that the Virtual Cypher
 // event stream echoes. Keep the same tool endpoint/envelope, but identify each long KG request so
@@ -651,13 +679,22 @@ async function kgQueryWithProgress(args,node){
 
 var COUNTRY='au';
 var MY_SERVICES={};
-var SEEN_IDS={}, SEEN_TITLES={};
+var SEEN_IDS={}, SEEN_TITLES={}, SAVED_IDS={};
 
 function titleKey(t){ return String(t==null?'':t).toLowerCase().replace(/^(the|a|an)\s+/,'').replace(/[^a-z0-9]/g,''); }
 function alreadySeen(m){
   if(m.imdbId && SEEN_IDS[m.imdbId]) return true;
   if(m.title && SEEN_TITLES[titleKey(m.title)]) return true;
   return false;
+}
+function syncSaveButtons(imdbId){
+  document.querySelectorAll('button[data-act="save"]').forEach(function(button){
+    var entry=registry[button.getAttribute('data-i')], film=entry&&entry.film;
+    if(!film||!film.imdbId||(imdbId&&film.imdbId!==imdbId)) return;
+    var saved=!!SAVED_IDS[film.imdbId];
+    button.disabled=saved;
+    button.textContent=saved?'Saved':'Save for later';
+  });
 }
 
 var DARING=[
@@ -675,7 +712,7 @@ function syncDaring(){ el('daring-label').textContent=daringBand().name+' · '+e
 el('daring').addEventListener('input',syncDaring);
 syncDaring();
 
-var tabs=[['tab-seen','sec-seen'],['tab-discover','sec-discover'],['tab-pair','sec-pair'],['tab-ask','sec-ask'],['tab-how','sec-how']];
+var tabs=[['tab-seen','sec-seen'],['tab-watchlist','sec-watchlist'],['tab-discover','sec-discover'],['tab-pair','sec-pair'],['tab-ask','sec-ask'],['tab-how','sec-how']];
 tabs.forEach(function(t){
   el(t[0]).addEventListener('click',function(){
     tabs.forEach(function(o){el(o[0]).classList.remove('active');el(o[1]).classList.remove('on');});
@@ -689,6 +726,8 @@ function filmCard(m,idx,depth){
   var poster=(m.poster&&m.poster!=='N/A')?'<img class="poster" src="'+escapeHtml(m.poster)+'" alt="">':'';
   var imdb=m.imdbId?'<a href="https://www.imdb.com/title/'+escapeHtml(m.imdbId)+'/" target="_blank" rel="noopener noreferrer">IMDb</a>':'';
   var more=(depth<2)?'<button class="btn ghost" data-act="more" data-i="'+idx+'">More like this</button>':'';
+  var saved=m.imdbId&&SAVED_IDS[m.imdbId];
+  var save=m.imdbId?'<button class="btn ghost" data-act="save" data-i="'+idx+'"'+(saved?' disabled':'')+'>'+(saved?'Saved':'Save for later')+'</button>':'';
   return '<div class="card">'+poster+'<div class="body">'+stars+
     '<h3>'+escapeHtml(m.title)+(m.year?' <span class="meta">('+escapeHtml(String(m.year))+')</span>':'')+'</h3>'+
     '<div class="byline">'+escapeHtml(m.director||'')+'</div>'+
@@ -700,6 +739,7 @@ function filmCard(m,idx,depth){
       '<button class="btn ghost" data-act="reviews" data-i="'+idx+'">Reviews</button>'+
       '<button class="btn ghost" data-act="music" data-i="'+idx+'">Classical pairing</button>'+
       '<button class="btn ghost" data-act="wiki" data-i="'+idx+'">Wikipedia</button>'+
+      save+
       '<button class="btn ghost rate-cta" data-act="rate" data-i="'+idx+'">'+(stars?'Change rating':'Seen it? Rate it')+'</button>'+
       more+
     '</div>'+
@@ -736,7 +776,8 @@ document.addEventListener('click',function(ev){
   if(!box) return;
   box.style.display='block';
   box.classList.toggle('tall', act==='more');
-  if(act==='watch'){ loadWatch(m,box); }
+  if(act==='save'){ saveForLater(m,b,box); }
+  else if(act==='watch'){ loadWatch(m,box); }
   else if(act==='trailer'){ loadTrailer(m,box); }
   else if(act==='reviews'){ loadReviews(m,box); }
   else if(act==='music'){ loadPairing(m.title+(m.year?' ('+m.year+')':''),box); }
@@ -773,6 +814,24 @@ async function loadSubscriptions(){
   }catch(ignored){ MY_SERVICES={}; }
 }
 
+async function loadWatchlist(){
+  var node=el('watchlist-out');
+  try{
+    var result=await gateway.kg.query({
+      cypher:"MATCH (me:AssistantUser)-[:WANTS_TO_SEE]->(w:MovieWatchlistEntry) RETURN w.imdbId AS imdbId, w.title AS title, w.year AS year, w.director AS director, w.genre AS genre, w.poster AS poster, w.plot AS plot, w.addedOn AS addedOn ORDER BY w.addedOn DESC LIMIT 200",
+      params:"{}"
+    });
+    var films=(result.rows||[]).map(normalise);
+    SAVED_IDS={};
+    films.forEach(function(film){if(film.imdbId) SAVED_IDS[film.imdbId]=true;});
+    syncSaveButtons();
+    var heading=el('watchlist-heading');
+    if(heading) heading.textContent=films.length?'Want to See · '+films.length.toLocaleString():'Want to See';
+    if(!films.length){node.innerHTML='<div class="note">Your saved list is empty. Add a film from Discover or from any recommendation.</div>';return;}
+    renderFilms(node,films,0);
+  }catch(e){fail(node,e);}
+}
+
 async function fetchLike(title,steer,limit,node){
   var r=await kgQueryWithProgress({
     cypher:"MATCH (x:MoviesLike {movie: $movie, steer: $steer, minYear: 1900, maxYear: 2100}) RETURN x LIMIT "+limit,
@@ -784,7 +843,7 @@ async function fetchLike(title,steer,limit,node){
 
 async function loadMoreLike(m,box,depth){
   var band=daringBand();
-  busy(box,'Following the thread from '+m.title+' — '+band.name.toLowerCase()+' picks…');
+  busy(box,'Following the thread from '+m.title+' — '+band.name.toLowerCase()+' picks…','Asking the AI film curator for unseen matches…');
   try{
     var films=await fetchLike(m.title,band.hint,12,box);
     if(!films.length){
@@ -807,7 +866,7 @@ function offerLabel(o){
 }
 
 async function loadWatch(m,box){
-  busy(box,'Checking what is streaming near you…');
+  busy(box,'Checking what is streaming near you…','Reading the Australian streaming catalogue…');
   try{
     var show=null;
     if(m.imdbId){
@@ -841,7 +900,7 @@ async function loadWatch(m,box){
 }
 
 async function loadTrailer(m,box){
-  busy(box,'Threading the trailer for '+m.title+'…');
+  busy(box,'Threading the trailer for '+m.title+'…','Searching YouTube for the best title-and-year match…');
   try{
     var query='"'+m.title+'" '+(m.year||'')+' official trailer';
     var res=await gateway.youtube.searchYouTubeVideos({q:query,part:'snippet',type:'video',videoEmbeddable:'true',maxResults:3});
@@ -856,12 +915,13 @@ async function loadTrailer(m,box){
 }
 
 async function loadReviews(m,box){
-  busy(box,'Gathering the notices and reading them…');
+  busy(box,'Gathering the notices and reading them…','Searching the live web for published reviews…');
   try{
     var q=m.title+' '+(m.year||'')+' film review';
     var res=await gateway.brave.webSearch({q:q});
     var hits=((res&&res.web&&res.web.results)||[]).slice(0,6);
     if(!hits.length){box.innerHTML='<div class="note">The open web returned no notices for that title.</div>';return;}
+    busyDetail(box,'Reading '+hits.length+' reviews and writing a short consensus…');
     var corpus=hits.map(function(r,i){return (i+1)+'. '+stripTags(r.title||'')+' ('+(r.profile&&r.profile.name?r.profile.name:r.url)+'): '+stripTags(r.description||'');}).join('\n');
     var summary=await gateway.ai.complete({
       prompt:'Below are search results for published reviews of the film "'+m.title+'" ('+(m.year||'')+').\n'+corpus+
@@ -877,7 +937,7 @@ async function loadReviews(m,box){
 }
 
 async function loadWiki(m,box){
-  busy(box,'Fetching the article…');
+  busy(box,'Fetching the article…','Searching Wikipedia for the matching film…');
   try{
     var res=await gateway.wikipedia.search({q:m.title+' '+(m.year||'')+' film',limit:3});
     var pages=(res&&res.pages)||[];
@@ -890,7 +950,7 @@ async function loadWiki(m,box){
 }
 
 async function loadPairing(filmName,box){
-  busy(box,'Choosing works to match the picture…');
+  busy(box,'Choosing works to match the picture…','Asking the music curator for four concert works…');
   try{
     var txt=await gateway.ai.complete({
       prompt:'Suggest 4 classical concert works (not film scores) whose mood, texture, pace and scale match the film "'+filmName+
@@ -904,6 +964,7 @@ async function loadPairing(filmName,box){
     var h='';
     for(var i=0;i<works.length;i++){
       var w=works[i];
+      busyDetail(box,'Finding a performance for work '+(i+1)+' of '+works.length+'…');
       var vid=await gateway.youtube.searchYouTubeVideos({q:w.composer+' '+w.title+' full performance',part:'snippet',type:'video',videoEmbeddable:'true',maxResults:1});
       var it=(vid&&vid.items&&vid.items[0])||null;
       var link=it&&it.id&&it.id.videoId?'https://www.youtube.com/watch?v='+it.id.videoId:'';
@@ -917,7 +978,7 @@ async function loadPairing(filmName,box){
 }
 
 async function loadRated(){
-  var node=el('rated-out'); busy(node,'Consulting your ratings…');
+  var node=el('rated-out'); busy(node,'Consulting your ratings…','Loading your film diary and filling in movie details…');
   try{
     var q=el('q-rated').value.trim();
     var r=await kgQueryWithProgress({
@@ -937,7 +998,7 @@ async function loadRated(){
 }
 
 async function loadTaste(){
-  var node=el('taste-out'); busy(node,'Reading your taste…');
+  var node=el('taste-out'); busy(node,'Reading your taste…','Reading your ratings and refreshing your taste portrait…');
   try{
     var r=await kgQueryWithProgress({cypher:"MATCH (me:AssistantUser)-[:HAS_MOVIE_TASTE_SUMMARY]->(ts:MovieTasteSummary) RETURN ts.summary AS summary, ts.count AS count",params:"{}"},node);
     if(!r.rows.length||!r.rows[0].summary){node.innerHTML='<div class="note">Rate a few films and a portrait of your taste will appear here.</div>';return;}
@@ -949,7 +1010,7 @@ async function loadSimilar(){
   var node=el('similar-out'); var q=el('q-similar').value.trim();
   if(!q){node.innerHTML='<div class="note">Name a film first.</div>';return;}
   var band=daringBand();
-  busy(node,'Screening the archive — '+band.name.toLowerCase()+' picks…');
+  busy(node,'Screening the archive — '+band.name.toLowerCase()+' picks…','Asking the AI film curator for unseen matches…');
   try{
     var films=await fetchLike(q,band.hint,12,node);
     if(!films.length){node.innerHTML='<div class="note">Nothing unseen came back for that title — try the full name as released, or a bolder setting.</div>';return;}
@@ -959,7 +1020,7 @@ async function loadSimilar(){
 
 async function loadRecs(){
   var node=el('recs-out'); var band=daringBand();
-  busy(node,'Programming a '+band.name.toLowerCase()+' season for you…');
+  busy(node,'Programming a '+band.name.toLowerCase()+' season for you…','Reading your taste, then asking the AI personal programmer…');
   try{
     var steer=el('q-steer').value.trim();
     var hint=band.hint+(steer?('; also: '+steer):'');
@@ -979,7 +1040,7 @@ async function loadRecs(){
 
 async function loadNew(){
   var node=el('new-out'); var band=daringBand();
-  busy(node,'Searching the web for what is newly out…');
+  busy(node,'Searching the web for what is newly out…','Checking live release coverage, then resolving each film…');
   try{
     var steer=el('q-new').value.trim();
     var hint=band.hint+(steer?('; also: '+steer):'');
@@ -1082,7 +1143,7 @@ function closeRating(){
 async function searchRatingFilms(){
   var q=el('rating-query').value.trim(), node=el('rating-results');
   if(!q){node.innerHTML='<div class="note">Type a film title first.</div>';return;}
-  busy(node,'Searching the programme…'); el('rating-search').disabled=true;
+  busy(node,'Searching the programme…','Looking up matching titles in OMDb…'); el('rating-search').disabled=true;
   try{
     var result=await gateway.omdb.getMovie({s:q,type:'movie'});
     var hits=((result&&result.Search)||[]).filter(function(hit){return !hit.Type||hit.Type==='movie';}).slice(0,8);
@@ -1095,7 +1156,7 @@ async function searchRatingFilms(){
     node.querySelectorAll('[data-rating-result]').forEach(function(button){
       button.addEventListener('click',async function(){
         var hit=hits[Number(button.getAttribute('data-rating-result'))];
-        busy(node,'Fetching '+hit.Title+'…');
+        busy(node,'Fetching '+hit.Title+'…','Loading the full film record from OMDb…');
         try{
           var details=await gateway.omdb.getMovie({i:hit.imdbID,plot:'short'});
           if(!details||details.Response==='False') throw new Error((details&&details.Error)||'That film could not be loaded.');
@@ -1124,6 +1185,26 @@ async function currentRatingUser(){
   var rows=(response&&response.rows)||response||[];
   currentUserCache=rows[0]||{};
   return currentUserCache;
+}
+
+async function saveForLater(film,button,box){
+  if(!film||!film.imdbId||SAVED_IDS[film.imdbId]) return;
+  var original=button.textContent;
+  button.disabled=true; button.textContent='Saving…';
+  box.innerHTML='<div class="note">Adding '+escapeHtml(film.title)+' to your film list…</div>';
+  try{
+    var me=await currentRatingUser();
+    if(!me.id) throw new Error('Your user profile could not be found.');
+    await gateway.repository.createEntry({type:'MovieWatchlistEntry',data:{
+      watchlistKey:me.id+'::'+film.imdbId,userId:me.id,imdbId:film.imdbId,title:film.title,
+      year:film.year,director:film.director,genre:film.genre,poster:film.poster,plot:film.plot,
+      addedOn:new Date().toISOString()
+    }});
+    SAVED_IDS[film.imdbId]=true;
+    syncSaveButtons(film.imdbId);
+    box.innerHTML='<div class="success">Saved '+escapeHtml(film.title)+' to Want to See.</div>';
+    loadWatchlist();
+  }catch(e){button.disabled=false;button.textContent=original;fail(box,e);}
 }
 
 async function saveRating(){
@@ -1225,6 +1306,7 @@ buildRatingPicker();
 
 loadSeen().then(function(){ loadRated(); });
 loadSubscriptions();
+loadWatchlist();
 loadTaste();
 addMsg('em','Ask me about a director, a film, a movement, or why a picture looks the way it does.');
 </script>

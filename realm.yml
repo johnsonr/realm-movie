@@ -6,14 +6,15 @@ description: |
   stream X), `rate-movie` (record a rating), `recall-movies` (read prior
   ratings) — backed by the `Movie` and `MovieRating` types so ratings
   persist into the world graph and feed back into future
-  recommendations. The bundled `roger` personality gives the
+  recommendations. A real `MovieWatchlistEntry` node and `WANTS_TO_SEE`
+  edge hold each user's saved films. The bundled `roger` personality gives the
   recommendation write-up a Roger-Ebert voice. The Picture Palace app
   (`apps/the-picture-palace.html`) is the same ground seen rather than
   asked for: search the films you've rated, follow "more like this" into
   unseen ones, see where each streams, read the taste summary the
   ratings add up to, and find newly released films matching that taste
   via live web search — under a choice of cinema themes.
-version: 0.5.0
+version: 0.6.0
 author: Rod Johnson
 url: https://github.com/johnsonr/realm-movie
 icon: icon.svg
@@ -31,6 +32,7 @@ exports:
   - roger
   - Movie
   - MovieRating
+  - MovieWatchlistEntry
   - StreamingService
   - UserStreamingSubscription
   - MovieTasteSummary

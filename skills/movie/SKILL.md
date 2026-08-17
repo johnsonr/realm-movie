@@ -182,6 +182,33 @@ If nothing matches, say so plainly — never invent a rating. For cross-cuts
 (highest-rated noirs, rated-above-8-and-streaming), use the Cypher tool; the
 canonical shape is `(User {id:$userId})-[:RATED]->(r:MovieRating)-[:OF]->(m:Movie)`.
 
+## "Save this for later" / "What films do I want to see?"
+
+The watchlist is graph-backed, never local or conversational state:
+`(me:AssistantUser)-[:WANTS_TO_SEE]->(w:MovieWatchlistEntry)`. Resolve the film through
+OMDb, read the current user's id, then create/merge the stable per-user entry:
+
+```js
+const film = await gateway.omdb.getMovie({ t: "The Big Sleep" });
+const meResult = await gateway.kg.query({
+  cypher: "MATCH (me:AssistantUser) RETURN me.id AS id LIMIT 1", params: "{}"
+});
+const me = ((meResult && meResult.rows) || meResult || [])[0] || {};
+await gateway.repository.createEntry({ type: "MovieWatchlistEntry", data: {
+  watchlistKey: `${me.id}::${film.imdbID}`, userId: me.id,
+  imdbId: film.imdbID, title: film.Title, year: Number(film.Year),
+  director: film.Director, genre: film.Genre, poster: film.Poster, plot: film.Plot,
+  addedOn: new Date().toISOString()
+}});
+```
+
+List it with a stored-data query (no API call needed):
+
+```cypher
+MATCH (me:AssistantUser)-[:WANTS_TO_SEE]->(w:MovieWatchlistEntry)
+RETURN w ORDER BY w.addedOn DESC
+```
+
 ## Always
 
 - **Never fabricate** an IMDb id, rating, or streaming claim — each comes from a
