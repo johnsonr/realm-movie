@@ -285,7 +285,7 @@
     </div>
     <div class="panel">
       <div class="heading-row">
-        <h2>Your ratings</h2>
+        <h2 id="ratings-heading">Your ratings</h2>
         <button class="btn ghost rate-cta" id="btn-add-rating">+ Add rating</button>
       </div>
       <div class="row">
@@ -579,6 +579,13 @@ function normalise(x){
           poster:x.poster, plot:x.plot||x.Plot, rating:x.rating, notes:x.notes, watchedOn:x.watchedOn};
 }
 
+// Poster URLs come from external movie metadata and can disappear without warning.
+// Remove a failed image so cards and dialogs fall back to their text-only layout.
+document.addEventListener('error',function(ev){
+  var image=ev.target;
+  if(image&&image.tagName==='IMG'&&image.matches('.poster,.search-result img,.selected-film img')) image.remove();
+},true);
+
 document.addEventListener('click',function(ev){
   var b=ev.target.closest('button[data-act]');
   if(!b) return;
@@ -599,13 +606,20 @@ document.addEventListener('click',function(ev){
 
 async function loadSeen(){
   try{
-    var r=await gateway.kg.query({cypher:"MATCH (me:AssistantUser)-[:RATED]->(rt:MovieRating)-[:OF]->(m:Movie) RETURN m.imdbId AS imdbId, m.title AS title LIMIT 1000",params:"{}"});
+    var r=await gateway.kg.query({cypher:"MATCH (me:AssistantUser)-[:RATED]->(rt:MovieRating) RETURN rt.imdbId AS imdbId, rt.title AS title",params:"{}"});
     r.rows.forEach(function(row){
       if(row.imdbId) SEEN_IDS[row.imdbId]=true;
       if(row.title) SEEN_TITLES[titleKey(row.title)]=true;
     });
+    syncRatingsHeading(r.rows.length);
   }catch(ignored){ SEEN_IDS={}; SEEN_TITLES={}; }
   syncRatingStarter();
+}
+
+function syncRatingsHeading(count){
+  var heading=el('ratings-heading');
+  if(!heading||count==null) return;
+  heading.textContent=count===0?'Your ratings':'Your '+Number(count).toLocaleString()+' '+(count===1?'rating':'ratings');
 }
 
 function syncRatingStarter(){
@@ -985,7 +999,7 @@ async function saveRating(){
     });
     status.innerHTML='<div class="success">Saved '+escapeHtml(film.title)+' — '+ratingState.score+' / 10.</div>';
     el('rating-save').textContent='Update rating';
-    loadRated(); loadTaste();
+    loadSeen(); loadRated(); loadTaste();
   }catch(e){status.innerHTML='<div class="err">'+escapeHtml(e&&e.message?e.message:String(e))+'</div>';el('rating-save').textContent='Save rating';}
   finally{ratingState.saving=false;paintRating();}
 }
