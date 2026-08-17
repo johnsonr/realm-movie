@@ -1,0 +1,307 @@
+# Movie domain types.
+#
+# Deliberately small: just `Movie` (canonical metadata for a film, keyed by IMDb id)
+# and `MovieRating` (the user's score for a Movie). Everything else that the
+# original movie-finder agent kept on its `MovieBuff` user object — country code,
+# preferred streaming services, hobbies, "movie likes / dislikes", free-form
+# `about` text — is intentionally NOT redeclared here. That information is the
+# user's profile, and the assistant already extracts and stores user-profile
+# facts via the DICE proposition pipeline ("user lives in AU", "user uses
+# Netflix and Stan", "user likes Tarantino"). Re-modelling it as a separate
+# `MovieBuff` entity would just create a second source of truth that drifts
+# from the proposition graph.
+#
+# Both types intentionally use the description-only shorthand for properties.
+# When richer typing is needed (e.g. validation rules on `rating`) flip a
+# property to the object form — see `src/main/kotlin/com/embabel/assistant/
+# workspace/types/PropertySpec.kt` for the schema.
+
+- name: Movie
+  description: |
+    A film, keyed by IMDb id. The canonical metadata record the assistant
+    references when discussing a movie; created on first OMDb lookup and
+    re-used for every subsequent rating, recommendation, or recall.
+  # Shared reference metadata, NOT user-owned. A film isn't "owned" by a
+  # user — the user's relationship to it is the rating. Without this,
+  # `Movie` falls to the framework default (`OWNED_BY` from-entry) and
+  # every film wrongly gets `(Movie)-[:OWNED_BY]->(User)`, double-anchoring
+  # it alongside the rating. `false` makes `MovieRating` the SOLE bridge:
+  #   (User)-[:RATED]->(MovieRating)-[:OF]->(Movie)
+  userAnchor: false
+  properties:
+    imdbId:
+      identity: true
+      description: "IMDb id, e.g. 'tt0110912' for Pulp Fiction. The identity key — the store MERGEs on it (deterministic, workspace-scoped id), so the same film is one Movie node however many times it's referenced."
+    title: "Display title, e.g. 'Pulp Fiction'."
+    year:
+      type: int
+      description: "Release year, e.g. 1994. Declared int so queries can range/order on it; OMDb's string is coerced."
+    genre: "Comma-separated genres as returned by OMDb, e.g. 'Crime, Drama'."
+    country: "Comma-separated production countries from OMDb, e.g. 'France, Italy'. Use CONTAINS to filter (a film can list several)."
+    director: "Primary director(s) as returned by OMDb."
+    runtimeMinutes:
+      type: int
+      description: "Runtime in minutes, e.g. 175. Declared int so `WHERE m.runtimeMinutes > 120` works; OMDb returns 'NNN min' and the host coerces it to the number on materialization."
+    plot: "One-paragraph plot summary from OMDb."
+    imdbRating:
+      type: number
+      description: "IMDb rating 0–10, e.g. 7.8. OMDb returns it as a string; declared number so it's coerced and you can ORDER BY / filter on it."
+    imdbVotes:
+      type: int
+      description: "Number of IMDb votes, e.g. 1234567 — a popularity proxy. OMDb returns a digit-grouped string ('1,234,567'); declared int so it's coerced and you can ORDER BY / filter on it."
+    poster: "URL of the film's poster image from OMDb (or 'N/A' when it has none)."
+  # No stored imdbUrl: OMDb doesn't return one, but it is derivable from the id in a query —
+  #   'https://www.imdb.com/title/' + m.imdbId + '/'  AS imdbUrl
+  # Methods on a Movie held in working state (`movie.details({})`,
+  # `movie.streaming({ country })`) are authored in TypeScript under `src/api/`
+  # and COMPILED — they are not declared here. See `src/api/movie.ts` and the
+  # README's "Compiled methods" section. This YAML carries only the schema.
+  #
+  # When the LLM looks a film up via OMDb, auto-bind the result as a Movie in
+  # working state (named after a slug of the title, e.g. 'jade') so it's in
+  # scope for follow-ups — no explicit save needed. fieldMap maps the OMDb
+  # response (Title/imdbID-cased) onto the Movie's own field names.
+  retrieval:
+    operation: "omdb.getMovie"
+    nameFrom: title
+    fieldMap:
+      imdbId: imdbID
+      title: Title
+      year: Year
+      genre: Genre
+      country: Country
+      director: Director
+      runtimeMinutes: Runtime
+      plot: Plot
+      imdbRating: imdbRating
+      imdbVotes: imdbVotes
+      poster: Poster
+  # SIMILAR_TO: films like one the user rated, sourced from the assistant's own film knowledge
+  # (see producers/movie.yml — a `knowledge` producer, not an API). Anchored on a rated film's
+  # TITLE; each suggestion is resolved to its imdbId so it canonicalizes onto this Movie spine and
+  # dedupes against films already rated. It is a LAZY query-time join (NOT persist:true — that flag
+  # marks an eager enrichment join, excluded from the query-time registry): the SIMILAR_TO edges are
+  # materialized transiently when the query traverses them and rolled back after, exactly like
+  # ResearchPaper/GitHubIssue. (Durable caching of static similarity would use the enrichment path —
+  # a separate follow-up.) Recommend unseen films with:
+  #   MATCH (u:AssistantUser)-[:RATED]->(rt:MovieRating) WHERE rt.rating >= 8
+  #   MATCH (rt)-[:SIMILAR_TO]->(rec:Movie)
+  #   WHERE NOT EXISTS { MATCH (u)-[:RATED]->(seen:MovieRating) WHERE seen.imdbId = rec.imdbId }
+  #   RETURN rec.title, count(*) AS overlap ORDER BY overlap DESC LIMIT 10
+  virtualJoins:
+    # OF: the canonical spine edge (MovieRating)-[:OF]->(Movie). A MovieRating stores only imdbId + title, so
+    # to reach a film's full metadata (or onward to reviews / streaming) from a rating you traverse OF, which
+    # fetches the Movie by imdbId (producer movieByImdbId → OMDb getMovie(i)). This makes the documented
+    # spine `(User)-[:RATED]->(MovieRating)-[:OF]->(Movie)` a real, traversable path — so "top 3 rated films
+    # and their reviews" is a single query: narrow the ratings, OF to the films, HAS_REVIEW to the reviews:
+    #   MATCH (u:AssistantUser)-[:RATED]->(rt:MovieRating) WITH rt ORDER BY rt.rating DESC LIMIT 3
+    #   MATCH (rt)-[:OF]->(m:Movie)-[:HAS_REVIEW]->(r:MovieReview) RETURN m.title, r.title, r.score
+    - anchorLabel: MovieRating
+      relationship: OF
+      keyField: imdbId             # MovieRating.imdbId — the film's IMDb id
+      recordKeyField: imdbId       # the fetched Movie echoes its imdbId (== the queried key) to link back
+      producer: movieByImdbId
+      description: >-
+        The film a rating is OF — its canonical Movie metadata, fetched by imdbId. Traverse this to go from a
+        MovieRating to the full film record (title, year, genre, director, plot, imdbRating) and onward to its
+        reviews or streaming options: (rt:MovieRating)-[:OF]->(m:Movie). One Movie per rating.
+    - anchorLabel: MovieRating
+      relationship: SIMILAR_TO
+      keyField: title              # MovieRating.title — the film the user rated
+      recordKeyField: similarTo    # the knowledge producer echoes the anchor title here
+      producer: similarMovies
+      description: >-
+        Films similar to one the user rated, from the assistant's own film knowledge (not an API).
+        Ratings are on a 1–10 scale, so anchor recommendations on the films the user LOVED, not merely
+        watched: filter `WHERE rt.rating >= 8` (8+/10) — a low-rated film is a negative signal, not a
+        "more like this". Each suggestion resolves to its imdbId so it dedupes against already-rated
+        films; exclude everything the user has seen with a NOT EXISTS over their MovieRating imdbIds,
+        and rank by how many loved films point at each candidate (`count(*) DESC`).
+    # SUGGESTS: fan-OUT off the TASTE SUMMARY — films matching your taste AS A WHOLE, not similars to any one
+    # rating. Declared HERE under Movie (the TARGET type) with anchorLabel MovieTasteSummary, like SIMILAR_TO is
+    # under Movie with anchorLabel MovieRating. Two-stage virtual chain: HAS_MOVIE_TASTE_SUMMARY (fan-IN)
+    # materializes the MovieTasteSummary node, then SUGGESTS (fan-OUT) generates films off its `summary`:
+    #   MATCH (me:AssistantUser)-[:HAS_MOVIE_TASTE_SUMMARY]->(ts:MovieTasteSummary)-[:SUGGESTS]->(m:Movie)
+    #   WHERE NOT EXISTS { (me)-[:RATED]->(seen:MovieRating) WHERE seen.imdbId = m.imdbId }
+    #   RETURN DISTINCT m
+    - anchorLabel: MovieTasteSummary
+      relationship: SUGGESTS
+      keyField: summary            # the MovieTasteSummary.summary prose is the generator's input
+      recordKeyField: fromTaste    # tasteBasedPicks echoes the anchor key here
+      producer: tasteBasedPicks
+      description: >-
+        Films that match your OVERALL taste, generated from your taste summary rather than from any one rating.
+        A good "surprise me based on everything I like" list; exclude films you've already rated.
+    # SUGGESTS_NEW: the WEB-GROUNDED sibling of SUGGESTS — NEW releases (in cinemas / fresh on streaming)
+    # matching the taste summary. What is newly out is volatile, so the producer searches the live web
+    # (tools: [web]) instead of answering from parametric memory; each find still resolves onto the
+    # Movie spine via OMDb so it dedupes against rated films. Same anchor, same chain shape:
+    #   MATCH (me:AssistantUser)-[:HAS_MOVIE_TASTE_SUMMARY]->(ts:MovieTasteSummary)-[:SUGGESTS_NEW]->(m:Movie)
+    - anchorLabel: MovieTasteSummary
+      relationship: SUGGESTS_NEW
+      keyField: summary
+      recordKeyField: freshFromTaste  # newReleasePicks echoes the anchor key here (distinct from SUGGESTS's fromTaste)
+      producer: newReleasePicks
+      description: >-
+        NEWLY RELEASED films matching your overall taste — currently in cinemas or fresh on streaming,
+        found by live web search rather than from memory. Use for "anything new out I'd like?";
+        exclude films you've already rated.
+
+- name: StreamingService
+  userAnchor: false
+  description: |
+    A streaming service (Netflix, Stan, …) a Movie can be watched on in the user's country.
+    VIRTUAL — fetched on demand from the Streaming Availability API when a query traverses
+    AVAILABLE_ON; never stored. ONE node per service (identity serviceId), shared by every film —
+    the per-film facts (the deep link, how it's offered) live on each film's own AVAILABLE_ON edge.
+    Use it to filter recommendations to films the user can actually stream, and to tell them WHERE:
+      MATCH (m:Movie)-[ao:AVAILABLE_ON]->(s:StreamingService)
+      RETURN m.title, s.serviceName, ao.offerType, ao.watchLink
+  properties:
+    serviceId:
+      identity: true
+      description: "Streaming service id, e.g. 'netflix'. Identity key."
+    serviceName: "Display name of the service, e.g. 'Netflix'."
+  # AVAILABLE_ON: the streaming options for a Movie in the user's country (producer streamingByImdb).
+  # Anchored on Movie.imdbId. A plain MATCH (not OPTIONAL) filters to films that ARE streamable —
+  # films with no option in-country simply drop out. Chains after SIMILAR_TO in one query:
+  #   MATCH (rt:MovieRating) WHERE rt.rating >= 8
+  #   MATCH (rt)-[:SIMILAR_TO]->(m:Movie)
+  #   WHERE NOT EXISTS { (:MovieRating {imdbId: m.imdbId}) }
+  #   MATCH (m)-[:AVAILABLE_ON]->(s:StreamingService)
+  #   RETURN m.title, collect(DISTINCT s.serviceName) AS services
+  virtualJoins:
+    - anchorLabel: Movie
+      relationship: AVAILABLE_ON
+      keyField: imdbId            # Movie.imdbId
+      recordKeyField: imdbId      # stamped onto each option by the producer's echoKeyAs
+      producer: streamingByImdb
+      description: >-
+        Streaming services where this Movie can be watched in the user's country. Only films with at
+        least one option appear, so a plain MATCH filters recommendations to what the user can stream.
+        The EDGE carries the per-film option details (producer edgeProject): `watchLink` (deep link to
+        THIS film on the service) and `offerType` (subscription / free / rent / buy) — read them off
+        the relationship: MATCH (m)-[ao:AVAILABLE_ON]->(s) RETURN ao.watchLink, ao.offerType.
+
+- name: UserStreamingSubscription
+  description: |
+    A streaming service the CURRENT USER subscribes to — the per-user half of the streaming catalog.
+    Seeded from pack reference data (reference/streaming-services.yml). The userAnchor gives
+    (:AssistantUser)-[:SUBSCRIBES_TO]->(:UserStreamingSubscription); filter recommendations to what the
+    user can actually watch by intersecting a Movie's AVAILABLE_ON services on serviceId:
+      MATCH (m:Movie)-[:AVAILABLE_ON]->(s:StreamingService)
+      WHERE EXISTS { (:AssistantUser)-[:SUBSCRIBES_TO]->(:UserStreamingSubscription {serviceId: s.serviceId}) }
+  userAnchor:
+    predicate: SUBSCRIBES_TO
+    direction: from-user
+  properties:
+    serviceId:
+      identity: true
+      description: "Streaming service id (matches StreamingService.serviceId / the API's service.id), e.g. 'netflix'."
+    serviceName: "Display name, e.g. 'Netflix'."
+
+- name: MovieTasteSummary
+  # Shared/virtual, not user-OWNED in the persistence sense: like Movie/StreamingService it is materialized on
+  # demand and reached FROM the scoped `(me:AssistantUser)`, so it needs no from-user anchor of its own.
+  # Movie-prefixed label + edge so this pack's fan-in node can't collide with another pack's summary type.
+  userAnchor: false
+  description: |
+    A one-per-user synthesis of the user's film taste, distilled from their MovieRatings. VIRTUAL — there is no
+    stored MovieTasteSummary; it is materialized on demand by aggregating (fan-IN) the user's ratings into ~100
+    words (producer `movieTasteSummary`, cached weekly). Reach it from the user and read `ts.summary`:
+      MATCH (me:AssistantUser)-[:HAS_MOVIE_TASTE_SUMMARY]->(ts:MovieTasteSummary) RETURN ts.summary
+  properties:
+    userId:
+      identity: true
+      description: "The user this summary is for — the identity key, so there is exactly ONE MovieTasteSummary per user."
+    summary: "The ~100-word synthesis of the user's film taste: directors, genres, eras, countries, and moods they love and avoid."
+    count:
+      type: int
+      description: "How many ratings the summary was distilled from."
+    generatedAt: "ISO-8601 timestamp the summary was generated (materialization time)."
+  # HAS_MOVIE_TASTE_SUMMARY: the fan-IN edge. Anchored on the user; the `movieTasteSummary` producer gathers the
+  # user's MovieRatings and reduces them to one node via the `synthesize` LLM aggregation. keyField is the user's
+  # `id` (== the userId/workspaceId scope key), echoed by the producer into `userId` so the one node links back.
+  virtualJoins:
+    - anchorLabel: AssistantUser
+      relationship: HAS_MOVIE_TASTE_SUMMARY
+      keyField: id
+      recordKeyField: anchorKey
+      producer: movieTasteSummary
+      description: >-
+        The user's film-taste summary, synthesized from every MovieRating they've recorded. One node per user —
+        ask for `ts.summary`. Materialized on demand and cached weekly, so it is cheap to read repeatedly. Use it
+        to answer "what's my taste in film?" / "summarize what I like" without hand-scanning the ratings.
+
+- name: MovieRating
+  description: |
+    A rating of a Movie, attributed to a PERSON in the workspace — the current user
+    OR any Person they've recorded a rating for (a friend, a family member). One rating
+    per (rater, movie): re-rating updates in place. Reads power "what have I rated?",
+    "what did <person> think of X?", the "exclude already-seen" filter, and cross-person
+    queries like "films <A> and <B> would both like".
+  # Every rating hangs off a Person by `(Person)-[:RATED]->(MovieRating)`. The current
+  # user's own ratings anchor on their AssistantUser node, which ALSO carries the `Person`
+  # label — so the SAME edge and direction serve "me" and everyone else, and a two-person
+  # query is one uniform join:
+  #   MATCH (a:Person)-[:RATED]->(ra:MovieRating), (b:Person)-[:RATED]->(rb:MovieRating)
+  #   WHERE ra.imdbId = rb.imdbId AND ra.rating >= 8 AND rb.rating >= 8
+  # For the CURRENT user the framework emits `(me)-[:RATED]->` automatically on create_entry
+  # (userAnchor below, from-user). Attributing a rating to ANOTHER person is done by seeding
+  # or a future skill that resolves the person (by email) and links `(person)-[:RATED]->(r)`.
+  userAnchor:
+    predicate: RATED
+    direction: from-user
+  properties:
+    ratingKey:
+      identity: true
+      description: "The identity key — '<raterId>::<imdbId>', e.g. 'rod_johnson_assistant::tt0110912'. Composite (rater + movie) so two people rating the SAME film are two distinct nodes, and a re-rate by the same person updates in place. When recording for the current user, raterId is the user's own id."
+    raterId: "The id of the Person this rating belongs to — the current user's id for their own ratings, or a contact's Person id (e.g. 'person:jane@example.com'). Matches the Person that (Person)-[:RATED]->(this) links from."
+    raterName: "Display name of the rater (e.g. 'Rod Johnson'), denormalised for cheap recall without a join to the Person."
+    imdbId: "IMDb id of the rated Movie (NOT the identity by itself — a movie can be rated by several people). Use the same value as Movie.imdbId so ratings join to films and to each other."
+    title: "Title of the rated movie, denormalised for cheap recall without a join."
+    rating:
+      type: int
+      required: true
+      description: "Score from 1 (terrible) to 10 (masterpiece). Whole numbers only."
+    notes: "Optional one-line reaction, in the rater's own words."
+    watchedOn: "Optional ISO-8601 date the movie was watched."
+
+- name: MovieReview
+  # Shared/virtual like Movie: materialized on demand, reached FROM a Movie. Not user-owned.
+  userAnchor: false
+  description: |
+    An INDIVIDUAL published review of a film — one node PER review (many per film): its url, headline, the
+    outlet, the critic, a representative excerpt, and a normalized score. VIRTUAL: found on demand by an LLM
+    WITH WEB SEARCH (producer `movieReviews`), never stored. A PROMPTED, TOOL-GROUNDED edge that returns this
+    type directly — the LLM produces these fields (no OMDb resolve). Reach it from a Movie:
+      MATCH (m:Movie)-[:HAS_REVIEW]->(r:MovieReview) RETURN r.title, r.url, r.publication, r.score ORDER BY r.score DESC
+  properties:
+    url:
+      identity: true
+      description: "Link to the review — the identity key (each distinct review is its own node)."
+    title: "The review's headline / title."
+    publication: "The outlet the review appeared in, e.g. 'The Guardian', 'RogerEbert.com'."
+    author: "The critic's name, if known."
+    excerpt: "A representative sentence or two from the review."
+    reviewDate: "ISO-8601 date the review was published, if shown — nullable (many reviews carry no date)."
+    sentiment: "Overall sentiment of the review: 'positive', 'mixed', or 'negative'."
+    score:
+      type: number
+      description: "The review's score normalized to 0–10 if the review gives a numeric one; often absent (stars/letters live in originalScore)."
+    originalScore: "The rating exactly as the review gives it, e.g. '4/5', 'A-', '★★★★' — kept because normalizing to score loses the native scale."
+    verdict: "A one-sentence takeaway of the review's overall verdict."
+    movieTitle: "The film this review is of — links the review back to its Movie (matches Movie.title)."
+  # HAS_REVIEW: declared under MovieReview (the type it PRODUCES) with anchorLabel Movie. Anchored on the film's
+  # title so the LLM has something to web-search; each review links back by movieTitle. MANY reviews per film —
+  # each keyed by its url. A two-stage chain works: (rt)-[:SIMILAR_TO]->(m:Movie)-[:HAS_REVIEW]->(r).
+  virtualJoins:
+    - anchorLabel: Movie
+      relationship: HAS_REVIEW
+      keyField: title
+      recordKeyField: movieTitle
+      producer: movieReviews
+      description: >-
+        Individual web-found reviews of the film (one node per review — url, headline, outlet, critic, excerpt,
+        score), gathered by an LLM with web search and cached. Many per film; ORDER BY r.score DESC for the best.
+        Reach it from a recommendation: (m:Movie)-[:HAS_REVIEW]->(r:MovieReview).
