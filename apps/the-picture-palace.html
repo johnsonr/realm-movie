@@ -11,7 +11,7 @@
 <style>
   /* ── Themes ─────────────────────────────────────────────────────────────────
      Pure CSS: each theme is a set of custom properties plus its own #house scene.
-     Classic Hollywood is the default; the picker in the header just swaps
+     Film Noir is the default; the picker in the header just swaps
      body[data-theme] and everything re-colours itself. */
   :root{
     /* Classic Hollywood — red curtains, gold sunburst, marquee bulbs */
@@ -65,15 +65,39 @@
   }
   body[data-theme=noir] #house{
     background-image:
-      radial-gradient(ellipse 50% 40% at 22% 0%, rgba(230,232,238,.16), transparent 70%),
-      radial-gradient(ellipse 130% 50% at 50% 118%, rgba(0,0,0,.6), transparent 75%),
-      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800' preserveAspectRatio='xMidYMax slice'><defs><linearGradient id='bgg' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='rgb(24,24,28)'/><stop offset='1' stop-color='rgb(8,8,10)'/></linearGradient></defs><rect width='1200' height='800' fill='url(%23bgg)'/><path d='M140 0 L480 0 L860 800 L520 800 Z' fill='rgb(236,238,244)' fill-opacity='0.05'/><path d='M640 0 L820 0 L1200 640 L1200 800 L1100 800 Z' fill='rgb(236,238,244)' fill-opacity='0.035'/><g fill='rgb(236,238,244)' fill-opacity='0.045' transform='skewY(-6)'><rect x='0' y='160' width='1200' height='20'/><rect x='0' y='220' width='1200' height='20'/><rect x='0' y='280' width='1200' height='20'/><rect x='0' y='340' width='1200' height='20'/><rect x='0' y='400' width='1200' height='20'/><rect x='0' y='460' width='1200' height='20'/><rect x='0' y='520' width='1200' height='20'/><rect x='0' y='580' width='1200' height='20'/><rect x='0' y='640' width='1200' height='20'/><rect x='0' y='700' width='1200' height='20'/><rect x='0' y='760' width='1200' height='20'/><rect x='0' y='820' width='1200' height='20'/></g><path d='M180 780 C 230 660 140 570 205 470 C 258 392 205 345 235 290' fill='none' stroke='rgb(236,238,244)' stroke-opacity='0.09' stroke-width='4'/></svg>");
+      linear-gradient(90deg, rgba(5,5,7,.34) 0%, rgba(5,5,7,.42) 52%, rgba(5,5,7,.14) 100%),
+      radial-gradient(ellipse 90% 72% at 44% 18%, transparent 25%, rgba(0,0,0,.38) 100%),
+      url("noir-detective.webp");
+    background-position:center, center, center bottom;
   }
   body[data-theme=drivein] #house{
     background-image:
       radial-gradient(ellipse 45% 25% at 50% 30%, rgba(160,220,255,.18), transparent 70%),
       radial-gradient(ellipse 120% 50% at 50% 115%, rgba(169,43,110,.42), transparent 72%),
       url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800' preserveAspectRatio='xMidYMax slice'><defs><linearGradient id='sky' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='rgb(16,9,38)'/><stop offset='0.55' stop-color='rgb(52,18,66)'/><stop offset='0.82' stop-color='rgb(150,52,60)'/><stop offset='1' stop-color='rgb(235,120,60)'/></linearGradient><linearGradient id='scr' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='rgb(240,244,255)' stop-opacity='0.85'/><stop offset='1' stop-color='rgb(180,200,230)' stop-opacity='0.45'/></linearGradient><g id='car'><path d='M0 30 Q8 12 32 10 Q44 0 66 0 Q88 0 100 10 Q124 12 132 30 Z'/><circle cx='30' cy='30' r='9'/><circle cx='102' cy='30' r='9'/></g></defs><rect x='0' y='0' width='1200' height='560' fill='url(%23sky)'/><g fill='rgb(255,255,255)' fill-opacity='0.8'><circle cx='90' cy='60' r='2'/><circle cx='210' cy='130' r='1.5'/><circle cx='330' cy='40' r='2'/><circle cx='480' cy='90' r='1.5'/><circle cx='700' cy='50' r='2'/><circle cx='840' cy='110' r='1.5'/><circle cx='980' cy='60' r='2'/><circle cx='1100' cy='140' r='1.5'/><circle cx='150' cy='200' r='1.5'/><circle cx='1040' cy='210' r='1.5'/></g><rect x='388' y='424' width='16' height='136' fill='rgb(6,4,10)'/><rect x='796' y='424' width='16' height='136' fill='rgb(6,4,10)'/><rect x='330' y='120' width='540' height='306' rx='6' fill='url(%23scr)'/><rect x='330' y='120' width='540' height='306' rx='6' fill='none' stroke='rgb(240,244,255)' stroke-opacity='0.3'/><rect x='0' y='560' width='1200' height='240' fill='rgb(8,5,14)'/><rect x='0' y='558' width='1200' height='3' fill='rgb(111,214,232)' fill-opacity='0.5'/><g fill='rgb(4,3,8)'><use href='%23car' x='150' y='610'/><use href='%23car' x='400' y='632'/><use href='%23car' x='660' y='610'/><use href='%23car' x='910' y='632'/></g></svg>");
+  }
+  /* Photographic house scenes. The gradients keep the working area quiet while
+     leaving each period detail visible around the edges. */
+  body[data-theme=hollywood] #house{
+    background-image:
+      linear-gradient(90deg, rgba(21,8,9,.34) 0%, rgba(21,8,9,.48) 54%, rgba(21,8,9,.10) 100%),
+      radial-gradient(ellipse 92% 78% at 45% 24%, transparent 22%, rgba(9,3,4,.42) 100%),
+      url("classic-hollywood.webp");
+    background-position:center, center, center bottom;
+  }
+  body[data-theme=midnight] #house{
+    background-image:
+      linear-gradient(90deg, rgba(7,8,12,.28) 0%, rgba(7,8,12,.50) 55%, rgba(7,8,12,.18) 100%),
+      radial-gradient(ellipse 96% 78% at 43% 20%, transparent 22%, rgba(3,5,10,.46) 100%),
+      url("midnight-screening.webp");
+    background-position:center, center, center center;
+  }
+  body[data-theme=drivein] #house{
+    background-image:
+      linear-gradient(90deg, rgba(13,7,24,.30) 0%, rgba(13,7,24,.46) 54%, rgba(13,7,24,.08) 100%),
+      radial-gradient(ellipse 96% 82% at 44% 20%, transparent 20%, rgba(7,3,15,.36) 100%),
+      url("drive-in.webp");
+    background-position:center, center, center bottom;
   }
   #house::after{content:''; position:absolute; inset:0; background:linear-gradient(180deg, var(--veil-a), var(--veil-b));}
   header{border-bottom:1px solid var(--border); padding:34px 20px 24px; text-align:center;
@@ -207,16 +231,16 @@
   }
 </style>
 </head>
-<body>
+<body data-theme="noir">
 <div id="house"></div>
 <header>
   <h1>The Picture Palace</h1>
   <div class="sub">your films, and the music they deserve</div>
   <div class="rule"></div>
   <div class="themes" id="themes" role="group" aria-label="House style">
-    <button data-theme="hollywood" class="active">Classic Hollywood</button>
+    <button data-theme="hollywood">Classic Hollywood</button>
     <button data-theme="midnight">Midnight Screening</button>
-    <button data-theme="noir">Film Noir</button>
+    <button data-theme="noir" class="active">Film Noir</button>
     <button data-theme="drivein">Drive-In</button>
   </div>
 </header>
@@ -1003,15 +1027,15 @@ buildRatingPicker();
   function applyTheme(t){
     document.body.setAttribute('data-theme',t);
     row.querySelectorAll('button').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-theme')===t);});
-    try{localStorage.setItem('pp-theme',t);}catch(ignored){}
+    try{localStorage.setItem('pp-theme-v2',t);}catch(ignored){}
   }
   row.addEventListener('click',function(ev){
     var b=ev.target.closest('button[data-theme]');
     if(b) applyTheme(b.getAttribute('data-theme'));
   });
   var saved=null;
-  try{saved=localStorage.getItem('pp-theme');}catch(ignored){}
-  applyTheme(saved&&row.querySelector('button[data-theme="'+saved+'"]')?saved:'hollywood');
+  try{saved=localStorage.getItem('pp-theme-v2');}catch(ignored){}
+  applyTheme(saved&&row.querySelector('button[data-theme="'+saved+'"]')?saved:'noir');
 })();
 
 loadSeen().then(function(){ loadRated(); });
