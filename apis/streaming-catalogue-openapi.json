@@ -1,0 +1,92 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Streaming Country Catalogue API",
+    "description": "The country and service catalogue from Movie of the Night's Streaming Availability API. Kept in its own learned-API namespace so it can evolve independently from show lookup.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    { "url": "https://streaming-availability.p.rapidapi.com" }
+  ],
+  "security": [
+    { "ApiKeyAuth": [] }
+  ],
+  "paths": {
+    "/countries": {
+      "get": {
+        "operationId": "getCountries",
+        "summary": "List supported countries and their streaming services.",
+        "description": "Returns every supported country keyed by its lowercase ISO 3166-1 alpha-2 code. Each country includes its currently supported streaming services in popularity order.",
+        "parameters": [
+          {
+            "name": "output_language",
+            "in": "query",
+            "required": false,
+            "description": "ISO 639-1 language code for localized names. Defaults to English.",
+            "schema": { "type": "string", "minLength": 2, "maxLength": 2 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Map of country codes to country records and supported services.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "$ref": "#/components/schemas/Country" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-RapidAPI-Key"
+      }
+    },
+    "schemas": {
+      "Service": {
+        "type": "object",
+        "description": "A streaming service supported in a particular country.",
+        "properties": {
+          "id": { "type": "string", "description": "Stable service id used by streaming options." },
+          "name": { "type": "string" },
+          "homePage": { "type": "string", "format": "uri" },
+          "themeColorCode": { "type": "string" },
+          "streamingOptionTypes": {
+            "type": "object",
+            "description": "Which offer types this service supports in the country.",
+            "properties": {
+              "subscription": { "type": "boolean" },
+              "free": { "type": "boolean" },
+              "rent": { "type": "boolean" },
+              "buy": { "type": "boolean" },
+              "addon": { "type": "boolean" }
+            }
+          }
+        },
+        "required": ["id", "name"]
+      },
+      "Country": {
+        "type": "object",
+        "description": "A supported streaming market and the services available there.",
+        "properties": {
+          "countryCode": { "type": "string", "minLength": 2, "maxLength": 2 },
+          "name": { "type": "string" },
+          "services": {
+            "type": "array",
+            "description": "Country-specific services, ordered by popularity.",
+            "items": { "$ref": "#/components/schemas/Service" }
+          }
+        },
+        "required": ["countryCode", "name", "services"]
+      }
+    }
+  }
+}

@@ -51,6 +51,18 @@ export interface MovieWatchlistInput {
   addedOn: string;
 }
 
+/** The current user's country for streaming availability lookups. */
+export interface MovieStreamingPreferencesInput {
+  /** Current user's graph id; one stable preferences record per user. */
+  userId: string;
+  /** ISO-3166 alpha-2 country code, lowercase (for example `au` or `us`). */
+  countryCode: string;
+  /** Display name retained for immediate UI and conversational recall. */
+  countryName: string;
+  /** ISO-8601 timestamp of the most recent change. */
+  updatedAt: string;
+}
+
 /** The current user's identity, read from the scoped graph to attribute their own ratings. */
 export interface CurrentUser {
   id?: string;
@@ -337,10 +349,10 @@ export class StreamingService extends Entity {
 
 /**
  * A streaming service the CURRENT USER subscribes to — the per-user half of the streaming
- * catalog. Seeded from realm reference data (`reference/streaming-services.yml`). The user
- * anchor gives `(:AssistantUser)-[:SUBSCRIBES_TO]->(:UserStreamingSubscription)`; filter
- * recommendations to what the user can actually watch by intersecting a Movie's
- * AVAILABLE_ON services on `serviceId`:
+ * catalog. Created and deleted through the app's country-specific checklist. The user anchor
+ * gives `(:AssistantUser)-[:SUBSCRIBES_TO]->(:UserStreamingSubscription)`; filter recommendations
+ * to what the user can actually watch by intersecting a Movie's AVAILABLE_ON services on
+ * `serviceId`:
  *
  * ```cypher
  * MATCH (m:Movie)-[:AVAILABLE_ON]->(s:StreamingService)
@@ -357,6 +369,26 @@ export class UserStreamingSubscription extends Entity {
 
   /** Display name, e.g. 'Netflix'. */
   declare serviceName: string;
+}
+
+/**
+ * The CURRENT USER's streaming market. Streaming catalogues and licences vary by
+ * country, so this is persisted explicitly rather than guessed from locale or a
+ * deployment default.
+ */
+@Node({ userAnchor: { predicate: "HAS_MOVIE_STREAMING_PREFERENCES", direction: "from-user" } })
+export class MovieStreamingPreferences extends Entity {
+  /** Current user's id. One identity means changing country updates this node in place. */
+  @Id() declare userId: string;
+
+  /** ISO-3166 alpha-2 country code, lowercase. */
+  declare countryCode: string;
+
+  /** Human-readable country name. */
+  declare countryName: string;
+
+  /** ISO-8601 timestamp of the most recent change. */
+  declare updatedAt: string;
 }
 
 /**

@@ -6,7 +6,7 @@
 <title>The Picture Palace — Your Film Taste</title>
 <!-- A plain filename beside this app: how a host finds the icon to draw for it. -->
 <link rel="icon" href="the-picture-palace.svg">
-<meta name="description" content="Cinematic film companion: search the films you've rated, follow 'more like this' from any film into unseen ones, get taste-based recommendations with an adventurousness slider, discover newly released films via live web search, see where each film streams in your country, summarise published reviews, pair films with classical works, choose a house style from Classic Hollywood to Drive-In, and inspect the virtual Cypher views behind it all.">
+<meta name="description" content="Cinematic film companion: search the films you've rated, follow 'more like this' from any film into unseen ones, get taste-based recommendations with an adventurousness slider, choose your country and streaming subscriptions, discover newly released films via live web search, see where each film streams, summarise published reviews, pair films with classical works, choose a house style from Classic Hollywood to Drive-In, and inspect the virtual Cypher views behind it all.">
 <script src="/api/v1/apps-runtime/gateway.js"></script>
 <script src="/api/v1/apps-runtime/v1/embabel.js"></script>
 <style>
@@ -265,6 +265,20 @@
     padding:10px 12px; border-radius:2px; font:inherit; color-scheme:dark}
   textarea{min-height:74px; resize:vertical}
   textarea:focus,input[type=date]:focus{outline:none; border-color:var(--amber)}
+  select{width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+    padding:11px 38px 11px 13px; border-radius:2px; font:inherit; color-scheme:dark}
+  select:focus{outline:none; border-color:var(--amber)}
+  .streaming-country{display:grid; grid-template-columns:minmax(220px,360px) minmax(0,1fr); gap:18px; align-items:end}
+  .streaming-country .field{margin-top:0}
+  .streaming-grid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:14px}
+  .service-choice{display:flex; align-items:center; gap:10px; min-width:0; padding:11px 12px; border:1px solid var(--border);
+    background:var(--surface-2); border-radius:2px; cursor:pointer; transition:border-color .15s,background .15s}
+  .service-choice:hover{border-color:var(--amber)}
+  .service-choice:has(input:checked){border-color:color-mix(in srgb,var(--amber) 58%,var(--border)); background:var(--tint-mid)}
+  .service-choice input{flex:0 0 auto; margin:0; accent-color:var(--amber); width:17px; height:17px}
+  .service-choice span{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .service-choice small{display:block; margin-left:auto; color:var(--dim); font-size:.65rem; white-space:nowrap}
+  .streaming-status{min-height:1.35em; margin-top:10px; color:var(--dim); font-size:.82rem}
   .rating-picker{display:flex; flex-wrap:wrap; gap:4px; margin-top:2px}
   .rating-star{border:0; background:transparent; color:#55525b; padding:2px; font-size:1.48rem; line-height:1; cursor:pointer}
   .rating-star.on{color:var(--amber); text-shadow:0 0 12px color-mix(in srgb, var(--amber) 25%, transparent)}
@@ -279,6 +293,7 @@
     .modal-shell{padding:16px}.rating-star{font-size:1.32rem}.heading-row{align-items:flex-start}.heading-row .btn{white-space:nowrap}
     .rating-starter{display:block}.rating-starter .btn{margin-top:16px}.rating-starter::after{right:-12px}
     .discover-filters{grid-template-columns:1fr}
+    .streaming-country{grid-template-columns:1fr}.streaming-grid{grid-template-columns:1fr}
     .cinema-progress{grid-template-columns:70px minmax(0,1fr); gap:12px; padding:12px}.film-spool{transform:scale(.78); transform-origin:left center}
   }
   @media (prefers-reduced-motion:reduce){
@@ -304,6 +319,7 @@
   <nav>
     <button id="tab-seen" class="active">Films You've Rated</button>
     <button id="tab-watchlist">Want to See</button>
+    <button id="tab-streaming">Streaming</button>
     <button id="tab-discover">Discover</button>
     <button id="tab-pair">Score a Film</button>
     <button id="tab-ask">Ask</button>
@@ -344,6 +360,28 @@
       </div>
       <div class="note">A real saved list in your film graph. Use <strong>Save for later</strong> on any film card to add to it.</div>
       <div id="watchlist-out" class="scroller" style="margin-top:14px"></div>
+    </div>
+  </section>
+
+  <section id="sec-streaming">
+    <div class="panel">
+      <h2>Your streaming</h2>
+      <div class="streaming-country">
+        <label class="field">
+          <span class="field-label">Country</span>
+          <select id="streaming-country" disabled>
+            <option value="">Loading countries…</option>
+          </select>
+        </label>
+        <div class="why">Streaming rights change by country. This selection controls every <strong>Where to watch</strong> check and is saved to your film graph.</div>
+      </div>
+      <div id="streaming-country-status" class="streaming-status" aria-live="polite"></div>
+    </div>
+    <div class="panel">
+      <h2 id="streaming-services-heading">Your services</h2>
+      <div class="why">Check the services you have. They are saved as subscriptions in your graph and marked <span class="yours">yours</span> on film cards.</div>
+      <div id="streaming-services" class="streaming-grid"></div>
+      <div id="streaming-services-status" class="streaming-status" aria-live="polite"></div>
     </div>
   </section>
 
@@ -470,10 +508,18 @@ RETURN m.imdbId AS imdbId, m.title AS title
 LIMIT 1000</pre>
 
       <h3 class="step">Your streaming subscriptions</h3>
-      <div class="why">Also loaded at startup, then used to mark services <span class="yours">yours</span> in the Where-to-watch panel.</div>
+      <div class="why">Your country and checked services are stored in the graph. The country determines which catalogue every Where-to-watch request reads; subscriptions mark the services you already hold as <span class="yours">yours</span>.</div>
+      <pre class="cy">MATCH (me:AssistantUser)-[:HAS_MOVIE_STREAMING_PREFERENCES]-&gt;(p:MovieStreamingPreferences)
+RETURN p.countryCode AS code, p.countryName AS name</pre>
       <pre class="cy">MATCH (me:AssistantUser)-[:SUBSCRIBES_TO]-&gt;(s:UserStreamingSubscription)
 RETURN s.serviceId AS id, s.serviceName AS name
 LIMIT 50</pre>
+      <div class="why">The checklist itself comes from the provider's live country catalogue, then each check or uncheck creates or deletes the corresponding subscription node.</div>
+      <pre class="cy">gateway.streamingCatalogue.getCountries({})
+gateway.repository.createEntry({
+  type: 'UserStreamingSubscription',
+  data: { serviceId, serviceName }
+})</pre>
     </div>
 
     <div class="panel">
@@ -521,8 +567,8 @@ RETURN x LIMIT 12</pre>
     <div class="panel">
       <h2>Off the graph</h2>
       <div class="why">Five of the card buttons reach outside the knowledge graph entirely, through the typed gateway:</div>
-      <pre class="cy">gateway.streamingAvailability.getShow({ id: imdbId, country: 'au' })
-    → Where to watch, filtered to the Australian catalogue
+      <pre class="cy">gateway.streamingAvailability.getShow({ id: imdbId, country: savedCountryCode })
+    → Where to watch, filtered to your selected country's catalogue
 
 gateway.youtube.searchYouTubeVideos({ q: title + year + ' official trailer' })
     → Trailer, with a direct link to the best matching video
@@ -597,7 +643,7 @@ if(E&&E.progress){
     var n=String(name||'');
     return /similarMovies/i.test(n)?'the AI film curator'
       :/movieByImdbId/i.test(n)?'OMDb film details'
-      :/streamingByImdb/i.test(n)?'the Australian programme guide'
+      :/streamingByImdb/i.test(n)?'the streaming programme guide'
       :/movieTasteSummary/i.test(n)?'the taste summariser'
       :/tasteBasedPicks/i.test(n)?'the AI personal programmer'
       :/newReleasePicks/i.test(n)?'the live release search'
@@ -712,8 +758,9 @@ async function kgQueryWithProgress(args,node){
   return body&&body.result;
 }
 
-var COUNTRY='au';
-var MY_SERVICES={};
+var COUNTRY='';
+var STREAMING_COUNTRIES={};
+var MY_SERVICES={}, MY_SERVICE_ENTRIES={};
 var SEEN_IDS={}, SEEN_TITLES={}, SAVED_IDS={};
 
 function titleKey(t){ return String(t==null?'':t).toLowerCase().replace(/^(the|a|an)\s+/,'').replace(/[^a-z0-9]/g,''); }
@@ -773,7 +820,7 @@ function syncDaring(){ el('daring-label').textContent=daringBand().name+' · '+e
 el('daring').addEventListener('input',syncDaring);
 syncDaring();
 
-var tabs=[['tab-seen','sec-seen'],['tab-watchlist','sec-watchlist'],['tab-discover','sec-discover'],['tab-pair','sec-pair'],['tab-ask','sec-ask'],['tab-how','sec-how']];
+var tabs=[['tab-seen','sec-seen'],['tab-watchlist','sec-watchlist'],['tab-streaming','sec-streaming'],['tab-discover','sec-discover'],['tab-pair','sec-pair'],['tab-ask','sec-ask'],['tab-how','sec-how']];
 tabs.forEach(function(t){
   el(t[0]).addEventListener('click',function(){
     tabs.forEach(function(o){el(o[0]).classList.remove('active');el(o[1]).classList.remove('on');});
@@ -874,10 +921,157 @@ function syncRatingStarter(){
 }
 
 async function loadSubscriptions(){
+  MY_SERVICES={}; MY_SERVICE_ENTRIES={};
   try{
-    var r=await gateway.kg.query({cypher:"MATCH (me:AssistantUser)-[:SUBSCRIBES_TO]->(s:UserStreamingSubscription) RETURN s.serviceId AS id, s.serviceName AS name LIMIT 50",params:"{}"});
-    r.rows.forEach(function(row){ MY_SERVICES[row.id]=row.name; });
-  }catch(ignored){ MY_SERVICES={}; }
+    var r=await gateway.kg.query({cypher:"MATCH (me:AssistantUser)-[:SUBSCRIBES_TO]->(s:UserStreamingSubscription) RETURN s.id AS entryId, s.serviceId AS id, s.serviceName AS name LIMIT 100",params:"{}"});
+    (r.rows||[]).forEach(function(row){
+      if(!row.id) return;
+      MY_SERVICES[row.id]=row.name;
+      MY_SERVICE_ENTRIES[row.id]={entryId:row.entryId,name:row.name};
+    });
+  }catch(ignored){ MY_SERVICES={}; MY_SERVICE_ENTRIES={}; }
+}
+
+function countryName(code){
+  var country=STREAMING_COUNTRIES[String(code||'').toLowerCase()];
+  return (country&&country.name)||String(code||'').toUpperCase();
+}
+
+function normaliseCountryCatalogue(response){
+  var source=response&&response.data?response.data:response;
+  var countries={};
+  if(Array.isArray(source)){
+    source.forEach(function(country){
+      if(country&&country.countryCode) countries[String(country.countryCode).toLowerCase()]=country;
+    });
+  }else{
+    Object.keys(source||{}).forEach(function(key){
+      var country=source[key];
+      if(!country||typeof country!=='object') return;
+      var code=String(country.countryCode||key).toLowerCase();
+      countries[code]={countryCode:code,name:country.name||code.toUpperCase(),services:Array.isArray(country.services)?country.services:[]};
+    });
+  }
+  return countries;
+}
+
+function renderCountryPicker(){
+  var select=el('streaming-country');
+  var countries=Object.keys(STREAMING_COUNTRIES).map(function(code){return STREAMING_COUNTRIES[code];});
+  countries.sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''));});
+  var html='<option value="">Choose your country…</option>';
+  countries.forEach(function(country){
+    var code=String(country.countryCode||'').toLowerCase();
+    html+='<option value="'+escapeHtml(code)+'"'+(code===COUNTRY?' selected':'')+'>'+escapeHtml(country.name||code.toUpperCase())+'</option>';
+  });
+  if(COUNTRY&&!STREAMING_COUNTRIES[COUNTRY]){
+    html+='<option value="'+escapeHtml(COUNTRY)+'" selected>'+escapeHtml(COUNTRY.toUpperCase())+'</option>';
+  }
+  select.innerHTML=html;
+  select.disabled=!countries.length;
+}
+
+function renderStreamingServices(){
+  var node=el('streaming-services'), heading=el('streaming-services-heading');
+  var count=Object.keys(MY_SERVICES).length;
+  heading.textContent=count?'Your '+count.toLocaleString()+' '+(count===1?'service':'services'):'Your services';
+  if(!COUNTRY){
+    node.innerHTML='<div class="note">Choose your country to see its streaming services.</div>';
+    return;
+  }
+  var market=STREAMING_COUNTRIES[COUNTRY], services=(market&&market.services)||[], seen={};
+  var rows=[];
+  services.forEach(function(service){
+    if(!service||!service.id||seen[service.id]) return;
+    seen[service.id]=true;
+    rows.push({id:service.id,name:service.name||service.id,outside:false});
+  });
+  Object.keys(MY_SERVICES).forEach(function(id){
+    if(!seen[id]) rows.push({id:id,name:MY_SERVICES[id]||id,outside:true});
+  });
+  if(!rows.length){
+    node.innerHTML='<div class="note">No service catalogue is available for '+escapeHtml(countryName(COUNTRY))+'.</div>';
+    return;
+  }
+  node.innerHTML=rows.map(function(service){
+    return '<label class="service-choice"><input type="checkbox" data-streaming-service="'+escapeHtml(service.id)+
+      '" data-service-name="'+escapeHtml(service.name)+'"'+(MY_SERVICES[service.id]?' checked':'')+'><span>'+escapeHtml(service.name)+
+      '</span>'+(service.outside?'<small>saved elsewhere</small>':'')+'</label>';
+  }).join('');
+}
+
+async function loadStreamingPreference(){
+  try{
+    var result=await gateway.kg.query({
+      cypher:"MATCH (me:AssistantUser)-[:HAS_MOVIE_STREAMING_PREFERENCES]->(p:MovieStreamingPreferences) RETURN p.countryCode AS code, p.countryName AS name LIMIT 1",
+      params:"{}"
+    });
+    var row=(result.rows||[])[0];
+    if(row&&row.code) COUNTRY=String(row.code).toLowerCase();
+  }catch(ignored){ COUNTRY=''; }
+}
+
+async function loadStreamingCatalogue(){
+  var status=el('streaming-country-status');
+  status.textContent='Loading the supported countries and services…';
+  try{
+    STREAMING_COUNTRIES=normaliseCountryCatalogue(await gateway.streamingCatalogue.getCountries({}));
+    if(!Object.keys(STREAMING_COUNTRIES).length) throw new Error('The provider returned an empty country catalogue.');
+    renderCountryPicker();
+    status.textContent=COUNTRY?'Saved country: '+countryName(COUNTRY)+'.':'Choose a country to make streaming results local to you.';
+  }catch(e){
+    STREAMING_COUNTRIES={};
+    renderCountryPicker();
+    status.innerHTML='<span class="err">The live country catalogue could not be loaded: '+escapeHtml(friendlyError(e))+'</span>';
+  }
+}
+
+async function loadStreamingSettings(){
+  await Promise.all([loadStreamingPreference(),loadSubscriptions()]);
+  await loadStreamingCatalogue();
+  renderStreamingServices();
+}
+
+async function saveStreamingCountry(){
+  var select=el('streaming-country'), next=String(select.value||'').toLowerCase();
+  if(!next||next===COUNTRY) return;
+  var previous=COUNTRY, status=el('streaming-country-status');
+  select.disabled=true; status.textContent='Saving '+countryName(next)+'…';
+  try{
+    var me=await currentRatingUser();
+    if(!me.id) throw new Error('Your user profile could not be found.');
+    var selected=STREAMING_COUNTRIES[next]||{};
+    await gateway.repository.createEntry({type:'MovieStreamingPreferences',data:{
+      userId:me.id,countryCode:next,countryName:selected.name||next.toUpperCase(),updatedAt:new Date().toISOString()
+    }});
+    COUNTRY=next;
+    renderStreamingServices();
+    status.textContent='Saved country: '+countryName(COUNTRY)+'. Where-to-watch checks now use this catalogue.';
+  }catch(e){
+    COUNTRY=previous; select.value=previous;
+    status.innerHTML='<span class="err">'+escapeHtml(friendlyError(e))+'</span>';
+  }finally{select.disabled=false;}
+}
+
+async function changeStreamingService(input){
+  var id=input.getAttribute('data-streaming-service'), name=input.getAttribute('data-service-name')||id;
+  var status=el('streaming-services-status'), wanted=input.checked;
+  input.disabled=true; status.textContent=(wanted?'Saving ':'Removing ')+name+'…';
+  try{
+    if(wanted){
+      await gateway.repository.createEntry({type:'UserStreamingSubscription',data:{serviceId:id,serviceName:name}});
+    }else{
+      var entry=MY_SERVICE_ENTRIES[id];
+      if(!entry||!entry.entryId) throw new Error('That saved subscription could not be resolved. Refresh and try again.');
+      await gateway.repository.deleteEntry({type:'UserStreamingSubscription',id:entry.entryId});
+    }
+    await loadSubscriptions();
+    renderStreamingServices();
+    status.textContent=wanted?name+' is now one of your services.':name+' removed from your services.';
+  }catch(e){
+    input.checked=!wanted; input.disabled=false;
+    status.innerHTML='<span class="err">'+escapeHtml(friendlyError(e))+'</span>';
+  }
 }
 
 async function loadWatchlist(){
@@ -935,7 +1129,12 @@ function offerLabel(o){
 }
 
 async function loadWatch(m,box){
-  busy(box,'Checking what is streaming near you…','Reading the Australian streaming catalogue…');
+  if(!COUNTRY){
+    box.innerHTML='<div class="note">Choose your country under <strong>Streaming</strong> first, so the result uses the right catalogue.</div>';
+    return;
+  }
+  var marketName=countryName(COUNTRY);
+  busy(box,'Checking what is streaming near you…','Reading the '+marketName+' streaming catalogue…');
   try{
     var show=null;
     if(m.imdbId){
@@ -946,7 +1145,7 @@ async function loadWatch(m,box){
     }
     var opts=(show&&show.streamingOptions&&show.streamingOptions[COUNTRY])||[];
     if(!opts.length){
-      box.innerHTML='<div class="note">Nothing streaming in Australia right now — it may be out of licence or disc-only at the moment.</div>';
+      box.innerHTML='<div class="note">Nothing streaming in '+escapeHtml(marketName)+' right now — it may be out of licence or disc-only at the moment.</div>';
       return;
     }
     opts=opts.slice().sort(function(a,b){
@@ -963,7 +1162,7 @@ async function loadWatch(m,box){
       var name=o.link?'<a href="'+escapeHtml(o.link)+'" target="_blank" rel="noopener noreferrer">'+escapeHtml(svc)+'</a>':escapeHtml(svc);
       h+='<div class="watch"><div>'+name+mine+'</div><div class="how">'+escapeHtml(offerLabel(o))+'</div></div>';
     });
-    h+='<div class="meta" style="margin-top:8px">Australia · subscriptions you hold marked "yours"</div>';
+    h+='<div class="meta" style="margin-top:8px">'+escapeHtml(marketName)+' · subscriptions you hold marked "yours"</div>';
     box.innerHTML=h;
   }catch(e){fail(box,e);}
 }
@@ -1353,6 +1552,11 @@ el('btn-pair').addEventListener('click',pairFromInput);
 el('q-pair').addEventListener('keydown',function(e){if(e.key==='Enter')pairFromInput();});
 el('btn-chat').addEventListener('click',ask);
 el('q-chat').addEventListener('keydown',function(e){if(e.key==='Enter')ask();});
+el('streaming-country').addEventListener('change',saveStreamingCountry);
+el('streaming-services').addEventListener('change',function(e){
+  var input=e.target.closest('input[data-streaming-service]');
+  if(input) changeStreamingService(input);
+});
 el('btn-open-rating').addEventListener('click',function(){openRating();});
 el('btn-add-rating').addEventListener('click',function(){openRating();});
 el('btn-first-rating').addEventListener('click',function(){openRating();});
@@ -1384,7 +1588,7 @@ buildRatingPicker();
 })();
 
 loadSeen().then(function(){ loadRated(); });
-loadSubscriptions();
+loadStreamingSettings();
 loadWatchlist();
 loadTaste();
 addMsg('em','Ask me about a director, a film, a movement, or why a picture looks the way it does.');

@@ -36,6 +36,7 @@ const requiredTypes = [
   "MovieWatchlistEntry",
   "StreamingService",
   "UserStreamingSubscription",
+  "MovieStreamingPreferences",
 ];
 for (const name of requiredTypes) {
   if (!types.has(name)) throw new Error(`Generated realm manifest is missing type ${name}`);
@@ -52,4 +53,9 @@ for (const relationship of ["HAS_MOVIE_TASTE_SUMMARY", "OF"]) {
 if (types.get("MovieWatchlistEntry")?.spec?.userAnchor?.predicate !== "WANTS_TO_SEE") {
   throw new Error("Generated realm manifest is missing the WANTS_TO_SEE user relationship");
 }
-
+if (
+  types.get("MovieStreamingPreferences")?.spec?.userAnchor?.predicate !==
+  "HAS_MOVIE_STREAMING_PREFERENCES"
+) {
+  throw new Error("Generated realm manifest is missing the HAS_MOVIE_STREAMING_PREFERENCES user relationship");
+}

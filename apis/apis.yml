@@ -1,10 +1,10 @@
-# Movie metadata + streaming availability.
+# Movie metadata, streaming availability, and the country/service catalogue.
 #
-# Both specs are vendored — neither vendor publishes an authoritative
+# All three specs are vendored — neither vendor publishes an authoritative
 # OpenAPI 3 document we can URL-fetch reliably, and pinning a vendored
 # copy is what `pack-travel` already does for Google Maps. Specs are
-# intentionally narrow: just the operations `recommend-movie` actually
-# calls. Add more here when a need arises rather than expanding the
+# intentionally narrow: just the operations the movie skill and app actually
+# call. Add more here when a need arises rather than expanding the
 # operation-ids list speculatively (each extra op grows the typed
 # surface the LLM sees).
 #
@@ -39,3 +39,14 @@
   operation-ids:
     - getShow
     - searchShowsByTitle
+
+# Kept as a separate learned API because installed worlds may already cache the narrower
+# streaming_availability surface. A distinct namespace/cache identity makes this additive operation
+# available on realm update without invalidating working show-lookup tools.
+- url: streaming-catalogue-openapi.json
+  name: streaming_catalogue
+  type: openapi
+  auth: api-key
+  token-env: X_RAPIDAPI_KEY
+  operation-ids:
+    - getCountries

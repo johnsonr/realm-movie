@@ -1,14 +1,7 @@
-# Reference data the movie pack brings into the KG (seeded idempotently on load — see the pack
-# reference-data loader in the assistant repo). Two parts:
-#
-#  1. The streaming-service CATALOG — the services that exist, keyed by the SAME id the Streaming
-#     Availability API returns (service.id: 'netflix', 'prime', 'apple', …), so AVAILABLE_ON options
-#     intersect these cleanly.
-#  2. The user's SUBSCRIPTIONS — a userAnchor edge (:AssistantUser)-[:SUBSCRIBES_TO]->(:StreamingService).
-#     Which services the user has is per-user; seeded here for now, capturable via chat later.
-#
-# NOTE: rod's specific subscriptions live here as a pragmatic seed; personalising *whose* subscriptions
-# (and capturing them conversationally) is the same follow-up as multi-user query scoping.
+# A small global starter catalogue for graph queries, keyed by the SAME ids returned by Streaming
+# Availability. The Picture Palace loads its country-specific checklist live from `/countries`.
+# Per-user subscriptions are deliberately NOT seeded: users check their own services in the app,
+# which persists UserStreamingSubscription nodes anchored by SUBSCRIBES_TO.
 
 # --- catalog (global) ---
 - type: StreamingService
@@ -20,16 +13,4 @@
 - type: StreamingService
   data: { serviceId: prime, serviceName: "Prime Video" }
 - type: StreamingService
-  data: { serviceId: apple, serviceName: "Apple TV+" }
-
-# --- the user's subscriptions (SUBSCRIBES_TO edge via UserStreamingSubscription's userAnchor) ---
-- type: UserStreamingSubscription
-  data: { serviceId: netflix, serviceName: Netflix }
-- type: UserStreamingSubscription
-  data: { serviceId: stan, serviceName: Stan }
-- type: UserStreamingSubscription
-  data: { serviceId: disney, serviceName: "Disney+" }
-- type: UserStreamingSubscription
-  data: { serviceId: prime, serviceName: "Prime Video" }
-- type: UserStreamingSubscription
   data: { serviceId: apple, serviceName: "Apple TV+" }

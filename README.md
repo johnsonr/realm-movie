@@ -16,8 +16,8 @@ owns the persistence and the UI.
 
 | Directory | What it contributes |
 |---|---|
-| `apis/` | Two OpenAPI 3 specs — OMDb (film metadata) and Streaming Availability (per-country streaming options). Calls go through `gateway.omdb.*` / `gateway.streamingAvailability.*` from `execute_javascript` / `execute_python`. |
-| `src/api/movie.ts` | The graph model and its behaviour: `Movie` (canonical IMDb metadata), `MovieRating` (a person's score), and `MovieWatchlistEntry` (a real per-user Want to See record). Repository writes automatically anchor ratings with `RATED` and saved films with `WANTS_TO_SEE`; `Movie` methods provide streaming, details, ratings, saving, and inherited graph navigation. Built to `dist/`. See "Type methods" below. |
+| `apis/` | Three OpenAPI 3 specs — OMDb metadata, per-country streaming options, and the country/service catalogue. Calls go through `gateway.omdb.*`, `gateway.streamingAvailability.*`, and `gateway.streamingCatalogue.*`. |
+| `src/api/movie.ts` | The graph model and its behaviour: `Movie` (canonical IMDb metadata), `MovieRating` (a person's score), `MovieWatchlistEntry` (a real per-user Want to See record), and per-user streaming country/subscriptions. Repository writes automatically anchor these records; `Movie` methods provide streaming, details, ratings, saving, and inherited graph navigation. Built to `dist/`. See "Type methods" below. |
 | `skills/recommend-movie/` | "What should I watch?" / "where can I stream X?" — owns the OMDb + Streaming Availability workflow and the cardinal rules (don't default the country; the response field is `streamingOptions`, not `streamingInfo`). Activates only for the recommend / availability paths. |
 | `skills/rate-movie/` | "I just watched X, give it N" — resolves the film on OMDb, then creates or updates the `MovieRating` (keyed by rater + imdbId). Nothing else is persisted: the `RATED` user edge is automatic, and the `(MovieRating)-[:OF]->(Movie)` spine edge is a virtual join (`producers/movie.yml`), materialized on demand from the rating's imdbId. |
 | `skills/recall-movies/` | "What did I think of X?" / "what have I rated?" — reads `MovieRating` via `list_entries` for single-title recall, or Cypher for anything cross-cutting. |
@@ -32,6 +32,12 @@ Discover has shared release-year and runtime bounds above its search modes. They
 1900–the current year and 60–240 minutes, and are passed into `MoviesLike`, taste-based picks,
 new releases, and every card's “More like this” traversal. These are Cypher/view constraints,
 not client-side hiding: they guide generation and constrain the resolved Movie records.
+
+The app's **Streaming** area loads the provider's live `/countries` catalogue, lets the user
+select their country and check the services they hold, and persists both choices in the graph:
+`HAS_MOVIE_STREAMING_PREFERENCES` points to one `MovieStreamingPreferences` record and
+`SUBSCRIBES_TO` points to each `UserStreamingSubscription`. Every card's “Where to watch” call
+uses that saved country and marks matching subscriptions as “yours”. No country is guessed.
 
 ## Sample queries
 
@@ -171,6 +177,7 @@ ORDER BY r.reviewDate DESC
 ```
 
 You can also click **Run** on the saved views in the console's **Views** tab: `MyFilmTaste`,
+`FavouriteStreamingCoverage` (checked services ranked by current Australian subscription coverage of your favourites),
 `StreamableRecommendations`, `NoirRecommendations`, `MoviesYoullProbablyHate`, `TasteBasedRecommendations`,
 `NewReleases` (web-searched new releases matching your taste), and the multi-person views
 `RatingsByRater`, `MutualFavourites`, `DividedOpinions`.
@@ -226,15 +233,12 @@ result (it pins each of the 3 titles individually); the single query above is th
 
 ## Why no MovieBuff entity?
 
-The original `movie-finder` kept a `MovieBuff` JPA entity carrying the
-user's country code, hobbies, preferred streaming services, "movie likes /
-dislikes", and free-form `about` text. None of that is redeclared here.
-The assistant already extracts and stores user-profile facts via the DICE
-proposition pipeline ("user lives in AU", "user uses Netflix and Stan",
-"user likes Tarantino") — re-modelling them as a parallel `MovieBuff`
-entity would just create a second source of truth that drifts from the
-proposition graph. The skill recalls those facts the same way it recalls
-anything else about the user.
+The original `movie-finder` kept country, services, taste and general profile
+data together in a broad `MovieBuff` row. This realm stores only the two
+operational streaming choices it needs as focused graph records:
+`MovieStreamingPreferences` for the market and `UserStreamingSubscription`
+for each checked service. Ratings remain the source for film taste, while
+unrelated user facts stay in the assistant's normal profile/proposition graph.
 
 ## Required environment variables
 

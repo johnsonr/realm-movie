@@ -1,0 +1,50 @@
+# Which checked subscription service currently carries the most of the user's favourite films?
+#
+# This is intentionally a saved view, not app UI. It bounds the remote fan-out to the user's
+# highest-rated favourites, keeps only INCLUDED subscription offers (not rent, buy, free, or paid
+# addons), intersects those offers with SUBSCRIBES_TO, and ranks services by distinct-film coverage.
+#
+# MARKET: the AVAILABLE_ON producer asks the Streaming Availability API for Australia (`country: "au"`
+# is pinned in producers/movie.yml), so these numbers describe the Australian market — hence the
+# constant `country` column. The view deliberately does NOT read a stored per-user country: nothing
+# here can vary it, so a preferences hop would only be a second place to state the same constant, and
+# an absent record (the default state of every user) silently emptied the whole view. When the market
+# becomes genuinely personal, it belongs on the user's profile and must flow into the producer's args
+# — not into a per-user singleton read back by this query.
+#
+# Run bare for the top 25 films rated 8+:
+#   MATCH (x:FavouriteStreamingCoverage) RETURN x
+# Or tune the definition of "favourite" / API fan-out:
+#   MATCH (x:FavouriteStreamingCoverage {minRating: 9, maxFavorites: 40}) RETURN x
+- name: FavouriteStreamingCoverage
+  description: Your checked subscription services ranked by how many of your favourite films they currently include in Australia.
+  params:
+    minRating:
+      type: int
+      default: 8
+      description: "Treat films rated at least this highly as favourites (1-10)."
+    maxFavorites:
+      type: int
+      default: 25
+      description: "Maximum favourites to check, highest-rated first; also caps live availability calls."
+  cypher: |
+    MATCH (me:AssistantUser)-[:RATED]->(rt:MovieRating)
+    WHERE rt.rating >= $minRating AND rt.imdbId IS NOT NULL
+    WITH me, rt ORDER BY rt.rating DESC, rt.title ASC LIMIT $maxFavorites
+    WITH me, collect(rt) AS favorites
+    UNWIND favorites AS rt
+    MATCH (:Movie {imdbId: rt.imdbId})-[offer:AVAILABLE_ON]->(service:StreamingService)
+    WHERE offer.offerType = 'subscription'
+      AND EXISTS {
+        (me)-[:SUBSCRIBES_TO]->(:UserStreamingSubscription {serviceId: service.serviceId})
+      }
+    WITH favorites, service,
+         count(DISTINCT rt.imdbId) AS favoriteCount,
+         collect(DISTINCT rt.title)[0..12] AS exampleFavorites
+    RETURN service.serviceName AS service,
+           'Australia' AS country,
+           favoriteCount,
+           size(favorites) AS favoritesChecked,
+           round(100.0 * favoriteCount / size(favorites), 1) AS coveragePercent,
+           exampleFavorites
+    ORDER BY favoriteCount DESC, service ASC

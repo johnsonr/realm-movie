@@ -5,8 +5,8 @@ description: Films — facts (this realm's OMDb source is authoritative, NOT web
 
 # Movies
 
-One skill for everything film-related. The realm ships two APIs (`omdb`,
-`streaming_availability`), the `Movie` and `MovieRating` world types, and the
+One skill for everything film-related. The realm ships three APIs (`omdb`,
+`streaming_availability`, `streaming_catalogue`), the `Movie` and `MovieRating` world types, and the
 `roger` personality (Roger-Ebert voice for write-ups).
 
 All API calls go through `gateway.<ns>.<method>(args)` from inside
@@ -15,6 +15,7 @@ All API calls go through `gateway.<ns>.<method>(args)` from inside
 | Surface | Shape |
 |---|---|
 | `gateway.omdb.getMovie(args)` | Pass exactly ONE of `i` (IMDb id, cheapest), `t` (exact title), `s` (search term). |
+| `gateway.streamingCatalogue.getCountries({})` | Supported countries and each country's current service catalogue. |
 | `gateway.streamingAvailability.getShow({ id, country })` | `id` is the IMDb id (with `tt`). `searchShowsByTitle({ country, title })` when you don't have an id. |
 | `gateway.kg.query({ cypher, params })` | Read world entries — there is NO `listEntries`. Reads go through the graph via Cypher; `gateway.repository` is create / update / delete + `describe` only. |
 | `gateway.repository.createEntry({ type, data, relations })` | Create/merge an entry (MERGEs on the identity key). |
@@ -56,9 +57,12 @@ genuinely lacks a detail the user asked for.
 
 ## "Where can I stream X?"
 
-1. **NEVER default the country — ASK.** It's in the user's profile/context as
-   `country: <code>`. If you can't see one, reply `"Which country are you in? I
-   need it to check streaming."` and STOP.
+1. **NEVER default the country.** First read the realm's explicit preference:
+   `MATCH (me:AssistantUser)-[:HAS_MOVIE_STREAMING_PREFERENCES]->(p:MovieStreamingPreferences)
+   RETURN p.countryCode AS country LIMIT 1`. If there is no saved preference,
+   use an explicit country in the user's current message/profile context. If
+   neither exists, reply `"Which country are you in? I need it to check
+   streaming."` and STOP.
 2. **If the film is ALREADY in scope** (a `Movie` variable in your `## State`
    block, e.g. `jade: Movie`), call its method — do NOT re-fetch and do NOT use
    memory or web:
@@ -75,6 +79,11 @@ genuinely lacks a detail the user asked for.
    buy), each a link to the option's `link`. Don't drop rent/buy — list them after.
 5. **If the call errors, SAY the tool failed — never substitute web search or
    "memory" and never invent services/links.**
+
+The user's checked services are stored at
+`(me:AssistantUser)-[:SUBSCRIBES_TO]->(s:UserStreamingSubscription)`. Prefer
+included/free options on those service ids, but still show other services and
+rent/buy choices when answering an availability question.
 
 ## Asking the user to choose — `choices` payloads
 

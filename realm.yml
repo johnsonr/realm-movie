@@ -7,14 +7,16 @@ description: |
   ratings) — backed by the `Movie` and `MovieRating` types so ratings
   persist into the world graph and feed back into future
   recommendations. A real `MovieWatchlistEntry` node and `WANTS_TO_SEE`
-  edge hold each user's saved films. The bundled `roger` personality gives the
+  edge hold each user's saved films. Country and checked streaming services are
+  also per-user graph records, so availability is never based on a guessed market.
+  The bundled `roger` personality gives the
   recommendation write-up a Roger-Ebert voice. The Picture Palace app
   (`apps/the-picture-palace.html`) is the same ground seen rather than
   asked for: search the films you've rated, follow "more like this" into
   unseen ones, see where each streams, read the taste summary the
   ratings add up to, and find newly released films matching that taste
   via live web search — under a choice of cinema themes.
-version: 0.6.1
+version: 0.7.2
 author: Rod Johnson
 url: https://github.com/johnsonr/realm-movie
 icon: icon.svg
@@ -28,6 +30,7 @@ tags:
 exports:
   - omdb
   - streaming_availability
+  - streaming_catalogue
   - movie
   - roger
   - Movie
@@ -35,5 +38,6 @@ exports:
   - MovieWatchlistEntry
   - StreamingService
   - UserStreamingSubscription
+  - MovieStreamingPreferences
   - MovieTasteSummary
   - MovieReview
