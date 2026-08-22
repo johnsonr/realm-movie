@@ -11,7 +11,7 @@
 //
 // Movie.fields: title, year, genre, director, runtimeMinutes, imdbId.
 
-import { cardComponent } from '/apps/entity-card.js';
+import { cardComponent } from '/apps/world/entity-card.js';
 
 const styles = `
   .movie{display:flex;flex-direction:column;gap:9px;font-family:'Inter',system-ui,sans-serif;}
@@ -106,7 +106,7 @@ function buildRating(host, imdbId, title, gw) {
 }
 
 export default await cardComponent({
-  fragmentUrl: '/apps/Movie.tpl',
+  fragmentUrl: '/apps/movie/Movie.tpl',
   styles,
   bind(root, entity, f) {
     const title = f.title || f.Title || entity.name || 'Untitled';
